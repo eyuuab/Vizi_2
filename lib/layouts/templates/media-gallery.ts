@@ -1,0 +1,118 @@
+import type { LayoutTemplate } from '@/types/layout';
+
+export const mediaGalleryLayout: LayoutTemplate = {
+  id: 'media-gallery',
+  name: 'Media Gallery',
+  category: 'MEDIA',
+  description: '2-4 images in a grid with optional captions. Showcases multiple visuals.',
+  thumbnail: '/thumbnails/media-gallery.svg',
+  slots: [
+    {
+      id: 'heading',
+      type: 'HEADING',
+      label: 'Gallery Title',
+      required: false,
+      position: { x: 5, y: 3, width: 90, height: 10 },
+      constraints: { minLength: 1, maxLength: 120 },
+      responsive: {
+        mobile: { x: 3, y: 2, width: 94, height: 8 },
+      },
+      aiHint: 'An optional title for the image gallery.',
+    },
+    {
+      id: 'image1',
+      type: 'IMAGE',
+      label: 'Image 1',
+      required: true,
+      position: { x: 3, y: 16, width: 46, height: 38 },
+      constraints: { aspectRatio: '16:9', allowedFormats: ['jpg', 'png', 'webp'] },
+      responsive: {
+        mobile: { x: 3, y: 12, width: 94, height: 20 },
+      },
+      aiHint: 'First gallery image (top-left). Should be visually cohesive with other gallery images.',
+    },
+    {
+      id: 'image2',
+      type: 'IMAGE',
+      label: 'Image 2',
+      required: true,
+      position: { x: 51, y: 16, width: 46, height: 38 },
+      constraints: { aspectRatio: '16:9', allowedFormats: ['jpg', 'png', 'webp'] },
+      responsive: {
+        mobile: { x: 3, y: 34, width: 94, height: 20 },
+      },
+      aiHint: 'Second gallery image (top-right). Maintains visual consistency with the collection.',
+    },
+    {
+      id: 'image3',
+      type: 'IMAGE',
+      label: 'Image 3',
+      required: false,
+      position: { x: 3, y: 57, width: 46, height: 38 },
+      constraints: { aspectRatio: '16:9', allowedFormats: ['jpg', 'png', 'webp'] },
+      responsive: {
+        mobile: { x: 3, y: 56, width: 94, height: 20 },
+      },
+      aiHint: 'Third gallery image (bottom-left). Optional — for a 2x2 grid.',
+    },
+    {
+      id: 'image4',
+      type: 'IMAGE',
+      label: 'Image 4',
+      required: false,
+      position: { x: 51, y: 57, width: 46, height: 38 },
+      constraints: { aspectRatio: '16:9', allowedFormats: ['jpg', 'png', 'webp'] },
+      responsive: {
+        mobile: { x: 3, y: 78, width: 94, height: 20 },
+      },
+      aiHint: 'Fourth gallery image (bottom-right). Optional — completes the 2x2 grid.',
+    },
+  ],
+  defaultContent: {
+    heading: 'Image Gallery',
+    image1: '',
+    image2: '',
+    image3: '',
+    image4: '',
+  },
+  minHeight: 400,
+  maxHeight: 'auto',
+  supportedMediaTypes: ['IMAGE'],
+  pptxMapping: {
+    heading: {
+      shapeType: 'textbox',
+      x: 0.67,
+      y: 0.23,
+      w: 12.0,
+      h: 0.75,
+    },
+    image1: {
+      shapeType: 'image',
+      x: 0.4,
+      y: 1.2,
+      w: 6.13,
+      h: 2.85,
+    },
+    image2: {
+      shapeType: 'image',
+      x: 6.8,
+      y: 1.2,
+      w: 6.13,
+      h: 2.85,
+    },
+    image3: {
+      shapeType: 'image',
+      x: 0.4,
+      y: 4.28,
+      w: 6.13,
+      h: 2.85,
+    },
+    image4: {
+      shapeType: 'image',
+      x: 6.8,
+      y: 4.28,
+      w: 6.13,
+      h: 2.85,
+    },
+  },
+};

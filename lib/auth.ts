@@ -7,7 +7,17 @@ import Credentials from 'next-auth/providers/credentials';
 import bcryptjs from 'bcryptjs';
 import { prisma } from '@/lib/db';
 
+const authSecrets = [
+  process.env.AUTH_SECRET,
+  process.env.NEXTAUTH_SECRET,
+  process.env.AUTH_SECRET_1,
+  process.env.AUTH_SECRET_2,
+]
+  .filter((value): value is string => Boolean(value?.trim()))
+  .filter((value, index, values) => values.indexOf(value) === index);
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  secret: authSecrets.length > 1 ? authSecrets : authSecrets[0],
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: 'jwt',

@@ -1,0 +1,118 @@
+import type { LayoutTemplate } from '@/types/layout';
+
+export const comparisonTwoLayout: LayoutTemplate = {
+  id: 'comparison-two',
+  name: 'Two Column Comparison',
+  category: 'COMPARISON',
+  description: 'Side-by-side comparison with two columns. Ideal for before/after, pros/cons, or option A vs B.',
+  thumbnail: '/thumbnails/comparison-two.svg',
+  slots: [
+    {
+      id: 'heading',
+      type: 'HEADING',
+      label: 'Comparison Title',
+      required: true,
+      position: { x: 5, y: 3, width: 90, height: 10 },
+      constraints: { minLength: 1, maxLength: 120 },
+      responsive: {
+        mobile: { x: 3, y: 2, width: 94, height: 8 },
+      },
+      aiHint: 'The overarching comparison title, e.g., "Plan A vs Plan B" or "Before vs After".',
+    },
+    {
+      id: 'labelLeft',
+      type: 'HEADING',
+      label: 'Left Label',
+      required: true,
+      position: { x: 5, y: 16, width: 43, height: 8 },
+      constraints: { minLength: 1, maxLength: 60 },
+      responsive: {
+        mobile: { x: 3, y: 12, width: 94, height: 6 },
+      },
+      aiHint: 'Label for the left comparison option. Short — 1-3 words.',
+    },
+    {
+      id: 'contentLeft',
+      type: 'LIST',
+      label: 'Left Content',
+      required: true,
+      position: { x: 5, y: 26, width: 43, height: 68 },
+      constraints: { minLength: 1, maxLength: 1500 },
+      responsive: {
+        mobile: { x: 3, y: 20, width: 94, height: 30 },
+      },
+      aiHint: 'Bullet points or list items for the left option. 3-6 items recommended.',
+    },
+    {
+      id: 'labelRight',
+      type: 'HEADING',
+      label: 'Right Label',
+      required: true,
+      position: { x: 52, y: 16, width: 43, height: 8 },
+      constraints: { minLength: 1, maxLength: 60 },
+      responsive: {
+        mobile: { x: 3, y: 52, width: 94, height: 6 },
+      },
+      aiHint: 'Label for the right comparison option. Short — 1-3 words.',
+    },
+    {
+      id: 'contentRight',
+      type: 'LIST',
+      label: 'Right Content',
+      required: true,
+      position: { x: 52, y: 26, width: 43, height: 68 },
+      constraints: { minLength: 1, maxLength: 1500 },
+      responsive: {
+        mobile: { x: 3, y: 60, width: 94, height: 30 },
+      },
+      aiHint: 'Bullet points or list items for the right option. Match the number of items on the left.',
+    },
+  ],
+  defaultContent: {
+    heading: 'Comparison',
+    labelLeft: 'Option A',
+    contentLeft: ['Feature one', 'Feature two', 'Feature three'],
+    labelRight: 'Option B',
+    contentRight: ['Feature one', 'Feature two', 'Feature three'],
+  },
+  minHeight: 350,
+  maxHeight: 'auto',
+  supportedMediaTypes: [],
+  pptxMapping: {
+    heading: {
+      shapeType: 'textbox',
+      x: 0.67,
+      y: 0.23,
+      w: 12.0,
+      h: 0.75,
+    },
+    labelLeft: {
+      shapeType: 'textbox',
+      x: 0.67,
+      y: 1.2,
+      w: 5.73,
+      h: 0.6,
+    },
+    contentLeft: {
+      shapeType: 'textbox',
+      x: 0.67,
+      y: 1.95,
+      w: 5.73,
+      h: 5.1,
+    },
+    labelRight: {
+      shapeType: 'textbox',
+      x: 6.93,
+      y: 1.2,
+      w: 5.73,
+      h: 0.6,
+    },
+    contentRight: {
+      shapeType: 'textbox',
+      x: 6.93,
+      y: 1.95,
+      w: 5.73,
+      h: 5.1,
+    },
+  },
+};

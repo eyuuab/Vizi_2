@@ -18,6 +18,8 @@ export interface UiState {
   commandPaletteOpen: boolean;
   exportDialogOpen: boolean;
   shareDialogOpen: boolean;
+  aiGenerating: boolean;
+  aiProgress: number;
 }
 
 const initialState: UiState = {
@@ -26,6 +28,8 @@ const initialState: UiState = {
   commandPaletteOpen: false,
   exportDialogOpen: false,
   shareDialogOpen: false,
+  aiGenerating: false,
+  aiProgress: 0,
 };
 
 export const uiSlice = createSlice({
@@ -53,6 +57,15 @@ export const uiSlice = createSlice({
     setShareDialogOpen(state, action: PayloadAction<boolean>) {
       state.shareDialogOpen = action.payload;
     },
+    setAiGenerating(state, action: PayloadAction<boolean>) {
+      state.aiGenerating = action.payload;
+      if (!action.payload) {
+        state.aiProgress = 0;
+      }
+    },
+    setAiProgress(state, action: PayloadAction<number>) {
+      state.aiProgress = Math.max(0, Math.min(100, action.payload));
+    },
   },
 });
 
@@ -64,6 +77,8 @@ export const {
   setCommandPaletteOpen,
   setExportDialogOpen,
   setShareDialogOpen,
+  setAiGenerating,
+  setAiProgress,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

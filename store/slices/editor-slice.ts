@@ -1,7 +1,14 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 export type EditorMode = 'edit' | 'preview' | 'present';
-export type RightPanelView = 'theme' | 'layout' | 'section-settings';
+export type RightPanelView = 'theme' | 'layout' | 'section-settings' | 'text-formatting';
+
+export interface ClipboardEntry {
+  type: 'section';
+  sectionId: string;
+  layoutId: string;
+  content: Record<string, unknown>;
+}
 
 export interface EditorState {
   mode: EditorMode;
@@ -11,9 +18,12 @@ export interface EditorState {
   rightSidebarOpen: boolean;
   rightPanelView: RightPanelView;
   zoom: number;
+  isEditing: boolean;
+  isDragging: boolean;
   isGenerating: boolean;
   isSaving: boolean;
   lastSavedAt: string | null;
+  clipboard: ClipboardEntry | null;
 }
 
 const initialState: EditorState = {
@@ -24,9 +34,12 @@ const initialState: EditorState = {
   rightSidebarOpen: true,
   rightPanelView: 'theme',
   zoom: 100,
+  isEditing: false,
+  isDragging: false,
   isGenerating: false,
   isSaving: false,
   lastSavedAt: null,
+  clipboard: null,
 };
 
 export const editorSlice = createSlice({
@@ -39,9 +52,19 @@ export const editorSlice = createSlice({
     selectSection(state, action: PayloadAction<string | null>) {
       state.selectedSectionId = action.payload;
       state.selectedSlotId = null;
+      if (action.payload) {
+        state.rightPanelView = 'layout';
+      } else {
+        state.rightPanelView = 'theme';
+      }
     },
     selectSlot(state, action: PayloadAction<string | null>) {
       state.selectedSlotId = action.payload;
+      if (action.payload) {
+        state.rightPanelView = 'text-formatting';
+      } else if (state.selectedSectionId) {
+        state.rightPanelView = 'layout';
+      }
     },
     toggleLeftSidebar(state) {
       state.leftSidebarOpen = !state.leftSidebarOpen;
@@ -56,6 +79,12 @@ export const editorSlice = createSlice({
     setZoom(state, action: PayloadAction<number>) {
       state.zoom = Math.max(25, Math.min(200, action.payload));
     },
+    setEditing(state, action: PayloadAction<boolean>) {
+      state.isEditing = action.payload;
+    },
+    setDragging(state, action: PayloadAction<boolean>) {
+      state.isDragging = action.payload;
+    },
     setIsGenerating(state, action: PayloadAction<boolean>) {
       state.isGenerating = action.payload;
     },
@@ -66,9 +95,14 @@ export const editorSlice = createSlice({
       state.lastSavedAt = action.payload;
       state.isSaving = false;
     },
+    setClipboard(state, action: PayloadAction<ClipboardEntry | null>) {
+      state.clipboard = action.payload;
+    },
     deselectAll(state) {
       state.selectedSectionId = null;
       state.selectedSlotId = null;
+      state.isEditing = false;
+      state.rightPanelView = 'theme';
     },
   },
 });
@@ -81,9 +115,12 @@ export const {
   toggleRightSidebar,
   setRightPanelView,
   setZoom,
+  setEditing,
+  setDragging,
   setIsGenerating,
   setIsSaving,
   setLastSavedAt,
+  setClipboard,
   deselectAll,
 } = editorSlice.actions;
 
