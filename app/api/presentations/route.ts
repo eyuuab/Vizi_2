@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getStarterTemplateById } from '@/lib/templates/starter-templates';
+import { loadAndComposePresentation } from '@/lib/renderer/load-presentation';
+import { generateThumbnailDataUrl } from '@/lib/renderer/thumbnail';
 import { CreatePresentationSchema, PaginationParamsSchema } from '@/types/api';
 import type {
   ApiErrorResponse,
@@ -165,13 +169,72 @@ export async function POST(
       );
     }
 
-    // If no themeId provided, find the first preset theme
-    let themeId = parsed.data.themeId;
-    if (!themeId) {
-      const defaultTheme = await prisma.theme.findFirst({
+    const selectedTemplate = parsed.data.templateId
+      ? getStarterTemplateById(parsed.data.templateId)
+      : undefined;
+
+    if (parsed.data.templateId && !selectedTemplate) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'INVALID_TEMPLATE',
+            message: 'Template not found.',
+          },
+        },
+        { status: 400 },
+      );
+    }
+
+    const getDefaultTheme = async (): Promise<{ id: string } | null> =>
+      prisma.theme.findFirst({
         where: { isPreset: true },
         select: { id: true },
       });
+
+    // Resolve theme preference: explicit theme > template theme > default preset
+    let themeId = parsed.data.themeId ?? selectedTemplate?.themeId;
+
+    if (themeId) {
+      const resolvedTheme = await prisma.theme.findUnique({
+        where: { id: themeId },
+        select: { id: true },
+      });
+
+      if (!resolvedTheme) {
+        // If user explicitly requested a theme, return a client error.
+        if (parsed.data.themeId) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: {
+                code: 'INVALID_THEME',
+                message: `Theme "${parsed.data.themeId}" does not exist.`,
+              },
+            },
+            { status: 400 },
+          );
+        }
+
+        // Template might reference a missing theme; gracefully fallback to default.
+        const fallbackTheme = await getDefaultTheme();
+        if (!fallbackTheme) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: {
+                code: 'NO_DEFAULT_THEME',
+                message:
+                  'No default theme found. Please seed the database with themes first.',
+              },
+            },
+            { status: 500 },
+          );
+        }
+        themeId = fallbackTheme.id;
+      }
+    } else {
+      const defaultTheme = await getDefaultTheme();
       if (!defaultTheme) {
         return NextResponse.json(
           {
@@ -194,11 +257,35 @@ export async function POST(
         description: parsed.data.description ?? null,
         userId: session.user.id,
         themeId,
+        metadata: selectedTemplate
+          ? ({
+              templateId: selectedTemplate.id,
+              templateTitle: selectedTemplate.title,
+              generatedAt: new Date().toISOString(),
+            } as Prisma.InputJsonValue)
+          : undefined,
+        sections: selectedTemplate
+          ? {
+              create: selectedTemplate.sections.map((section) => ({
+                layoutId: section.layoutId,
+                order: section.order,
+                content: JSON.parse(
+                  JSON.stringify(section.content),
+                ) as Prisma.InputJsonValue,
+                notes: section.notes ?? null,
+              })),
+            }
+          : undefined,
       },
       include: {
         sections: true,
         theme: true,
       },
+    });
+
+    // Generate thumbnail in the background (don't block the response)
+    generatePresentationThumbnail(presentation.id).catch((err) => {
+      console.error('[presentations] Thumbnail generation failed:', err);
     });
 
     return NextResponse.json(
@@ -213,4 +300,16 @@ export async function POST(
       { status: 500 },
     );
   }
+}
+
+/**
+ * Generate and save a thumbnail for a presentation.
+ */
+async function generatePresentationThumbnail(presentationId: string): Promise<void> {
+  const { composed } = await loadAndComposePresentation(presentationId);
+  const thumbnailDataUrl = await generateThumbnailDataUrl(composed);
+  await prisma.presentation.update({
+    where: { id: presentationId },
+    data: { thumbnail: thumbnailDataUrl },
+  });
 }

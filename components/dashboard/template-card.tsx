@@ -5,16 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Loader2, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import type { StarterTemplateSummary } from '@/lib/templates/starter-templates';
 
-export interface TemplateData {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  sectionCount: number;
-  themeId: string;
-  color: string;
-}
+export type TemplateData = StarterTemplateSummary;
 
 interface TemplateCardProps {
   template: TemplateData;
@@ -31,6 +24,7 @@ export function TemplateCard({ template }: TemplateCardProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          templateId: template.id,
           title: template.title,
           description: template.description,
           themeId: template.themeId,
@@ -49,12 +43,22 @@ export function TemplateCard({ template }: TemplateCardProps) {
 
   return (
     <div className="group rounded-lg border bg-card shadow-sm transition-all hover:shadow-md overflow-hidden">
-      <div
-        className="aspect-video flex items-center justify-center relative"
-        style={{ backgroundColor: template.color }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-black/5 to-black/20" />
-        <FileText className="h-10 w-10 text-white/80 relative z-10" />
+      <div className="aspect-video flex items-center justify-center relative overflow-hidden">
+        {template.thumbnail ? (
+          <img
+            src={template.thumbnail}
+            alt={template.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center"
+            style={{ backgroundColor: template.color }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-black/5 to-black/20" />
+            <FileText className="h-10 w-10 text-white/80 relative z-10" />
+          </div>
+        )}
       </div>
       <div className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">

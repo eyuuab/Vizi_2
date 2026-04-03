@@ -13,42 +13,44 @@ export function MediaGalleryLayout({ section }: MediaGalleryLayoutProps): React.
 
   return (
     <BaseSection section={section}>
-      <SlotRenderer
-        slotId="heading"
-        slotType="HEADING"
-        content={content['heading']}
-        layoutId={layoutId}
-        className="text-[var(--sf-text-2xl)] mb-6"
-      />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-[var(--sf-slot-gap)]">
+      <div className="flex flex-col h-full py-6">
         <SlotRenderer
-          slotId="image1"
-          slotType="IMAGE"
-          content={content['image1']}
+          slotId="heading"
+          slotType="HEADING"
+          content={content['heading']}
           layoutId={layoutId}
-          className="aspect-video"
+          className="text-[clamp(1.25rem,2.2vw,1.75rem)] leading-tight mb-6 font-bold"
         />
-        <SlotRenderer
-          slotId="image2"
-          slotType="IMAGE"
-          content={content['image2']}
-          layoutId={layoutId}
-          className="aspect-video"
-        />
-        <SlotRenderer
-          slotId="image3"
-          slotType="IMAGE"
-          content={content['image3']}
-          layoutId={layoutId}
-          className="aspect-video"
-        />
-        <SlotRenderer
-          slotId="image4"
-          slotType="IMAGE"
-          content={content['image4']}
-          layoutId={layoutId}
-          className="aspect-video"
-        />
+        <div className="flex-1 grid grid-cols-2 gap-[var(--sf-slot-gap,16px)]">
+          <SlotRenderer
+            slotId="image1"
+            slotType="IMAGE"
+            content={content['image1']}
+            layoutId={layoutId}
+            className="aspect-video rounded-[var(--sf-border-radius,8px)] overflow-hidden"
+          />
+          <SlotRenderer
+            slotId="image2"
+            slotType="IMAGE"
+            content={content['image2']}
+            layoutId={layoutId}
+            className="aspect-video rounded-[var(--sf-border-radius,8px)] overflow-hidden"
+          />
+          <SlotRenderer
+            slotId="image3"
+            slotType="IMAGE"
+            content={content['image3']}
+            layoutId={layoutId}
+            className="aspect-video rounded-[var(--sf-border-radius,8px)] overflow-hidden"
+          />
+          <SlotRenderer
+            slotId="image4"
+            slotType="IMAGE"
+            content={content['image4']}
+            layoutId={layoutId}
+            className="aspect-video rounded-[var(--sf-border-radius,8px)] overflow-hidden"
+          />
+        </div>
       </div>
     </BaseSection>
   );

@@ -13,26 +13,26 @@ export function ContentTextImageLayout({ section }: ContentTextImageLayoutProps)
 
   return (
     <BaseSection section={section}>
-      <div className="flex flex-col md:flex-row gap-[var(--sf-slot-gap)]">
-        {/* Text side (60%) */}
-        <div className="flex-1 md:w-[60%] md:flex-none">
+      <div className="flex flex-col md:flex-row gap-[var(--sf-slot-gap,32px)] h-full items-stretch">
+        {/* Text side (55%) */}
+        <div className="flex flex-col justify-center flex-1 md:w-[55%] md:flex-none py-8">
           <SlotRenderer
             slotId="heading"
             slotType="HEADING"
             content={content['heading']}
             layoutId={layoutId}
-            className="text-[var(--sf-text-3xl)] mb-4"
+            className="text-[clamp(1.5rem,2.8vw,2.25rem)] leading-tight mb-6 font-bold"
           />
           <SlotRenderer
             slotId="body"
             slotType="RICHTEXT"
             content={content['body']}
             layoutId={layoutId}
-            className="text-[var(--sf-text-base)]"
+            className="text-[clamp(0.875rem,1.3vw,1.125rem)] leading-relaxed"
           />
         </div>
-        {/* Image side (40%) */}
-        <div className="flex-1 md:w-[40%] md:flex-none min-h-[200px]">
+        {/* Image side (45%) */}
+        <div className="flex-1 md:w-[45%] md:flex-none rounded-[var(--sf-border-radius,12px)] overflow-hidden">
           <SlotRenderer
             slotId="image"
             slotType="IMAGE"

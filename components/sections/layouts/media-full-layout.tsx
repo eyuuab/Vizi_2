@@ -12,7 +12,7 @@ export function MediaFullLayout({ section }: MediaFullLayoutProps): React.JSX.El
   const { content, layoutId } = section;
 
   return (
-    <BaseSection section={section} className="relative min-h-[400px] overflow-hidden p-0">
+    <BaseSection section={section} className="relative overflow-hidden !p-0">
       {/* Full-bleed media */}
       <div className="absolute inset-0">
         <SlotRenderer
@@ -27,20 +27,20 @@ export function MediaFullLayout({ section }: MediaFullLayoutProps): React.JSX.El
       </div>
 
       {/* Overlay text */}
-      <div className="relative z-10 flex flex-col justify-end min-h-[400px] p-[var(--sf-section-padding-left)]">
+      <div className="relative z-10 flex flex-col justify-end h-full p-[var(--sf-section-padding-left,64px)] pb-16">
         <SlotRenderer
           slotId="overlayTitle"
           slotType="HEADING"
           content={content['overlayTitle']}
           layoutId={layoutId}
-          className="text-[var(--sf-text-3xl)] text-white mb-2"
+          className="text-[clamp(1.5rem,3vw,2.5rem)] leading-tight text-white mb-3 font-bold"
         />
         <SlotRenderer
           slotId="overlayCaption"
           slotType="TEXT"
           content={content['overlayCaption']}
           layoutId={layoutId}
-          className="text-[var(--sf-text-sm)] text-white/80"
+          className="text-[clamp(0.75rem,1.2vw,1rem)] text-white/80 max-w-2xl leading-relaxed"
         />
       </div>
     </BaseSection>

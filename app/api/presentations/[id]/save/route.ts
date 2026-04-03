@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { loadAndComposePresentation } from '@/lib/renderer/load-presentation';
+import { generateThumbnailDataUrl } from '@/lib/renderer/thumbnail';
 import type { ApiErrorResponse, ApiSuccessResponse } from '@/types/api';
 
 /**
@@ -113,6 +115,11 @@ export async function POST(
 
     const savedAt = new Date().toISOString();
 
+    // Regenerate thumbnail in background after save
+    regenerateThumbnail(id).catch((err) => {
+      console.error('[save] Thumbnail regeneration failed:', err);
+    });
+
     return NextResponse.json({ success: true, data: { savedAt } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
@@ -121,4 +128,13 @@ export async function POST(
       { status: 500 },
     );
   }
+}
+
+async function regenerateThumbnail(presentationId: string): Promise<void> {
+  const { composed } = await loadAndComposePresentation(presentationId);
+  const thumbnailDataUrl = await generateThumbnailDataUrl(composed);
+  await prisma.presentation.update({
+    where: { id: presentationId },
+    data: { thumbnail: thumbnailDataUrl },
+  });
 }

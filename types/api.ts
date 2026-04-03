@@ -50,6 +50,7 @@ export const CreatePresentationSchema = z.object({
   title: z.string().min(1).max(500),
   description: z.string().max(2000).optional(),
   themeId: z.string().optional(),
+  templateId: z.string().optional(),
 });
 
 export type CreatePresentationInput = z.infer<typeof CreatePresentationSchema>;

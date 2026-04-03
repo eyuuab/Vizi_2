@@ -13,20 +13,22 @@ export function ContentTextLayout({ section }: ContentTextLayoutProps): React.JS
 
   return (
     <BaseSection section={section}>
-      <SlotRenderer
-        slotId="heading"
-        slotType="HEADING"
-        content={content['heading']}
-        layoutId={layoutId}
-        className="text-[var(--sf-text-3xl)] mb-6"
-      />
-      <SlotRenderer
-        slotId="body"
-        slotType="RICHTEXT"
-        content={content['body']}
-        layoutId={layoutId}
-        className="text-[var(--sf-text-base)]"
-      />
+      <div className="flex flex-col justify-center h-full py-8">
+        <SlotRenderer
+          slotId="heading"
+          slotType="HEADING"
+          content={content['heading']}
+          layoutId={layoutId}
+          className="text-[clamp(1.5rem,2.8vw,2.25rem)] leading-tight mb-8 font-bold"
+        />
+        <SlotRenderer
+          slotId="body"
+          slotType="RICHTEXT"
+          content={content['body']}
+          layoutId={layoutId}
+          className="text-[clamp(0.875rem,1.3vw,1.125rem)] leading-relaxed max-w-4xl"
+        />
+      </div>
     </BaseSection>
   );
 }

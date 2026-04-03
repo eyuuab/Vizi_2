@@ -33,14 +33,14 @@ export function BaseSection({ section, children, className }: BaseSectionProps):
       data-section-id={section.id}
       data-layout-id={section.layoutId}
       className={cn(
-        'relative w-full',
-        'py-[var(--sf-section-padding-top)] px-[var(--sf-section-padding-left)]',
+        'relative w-full h-full',
+        'py-[var(--sf-section-padding-top,48px)] px-[var(--sf-section-padding-left,64px)]',
         section.isHidden && 'opacity-50',
         className,
       )}
       style={style}
     >
-      <div className="mx-auto w-full max-w-[var(--sf-max-width)]">
+      <div className="mx-auto w-full h-full max-w-[var(--sf-max-width)]">
         {children}
       </div>
     </section>

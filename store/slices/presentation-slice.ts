@@ -340,9 +340,10 @@ export const presentationSlice = createSlice({
               }
             }
 
-            // 4) Do not inject template sample content on layout switch.
-            // Leave unmatched slots empty so user content stays preserved.
-            newContent[slot.id] = getEmptySlotValue(slot.type);
+            // 4) Only fill with empty default if no content was migrated.
+            if (newContent[slot.id] === undefined) {
+              newContent[slot.id] = getEmptySlotValue(slot.type);
+            }
           }
 
           section.content = newContent;

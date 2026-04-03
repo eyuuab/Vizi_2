@@ -185,6 +185,15 @@ export function createGenerationStream(
           ? await processImageSlots(sections)
           : clearImageSlots(sections);
 
+        // Emit updated sections with image URLs
+        for (const section of sectionsWithImages) {
+          emit({
+            type: 'section',
+            data: section,
+            timestamp: Date.now(),
+          });
+        }
+
         // Step 5: Select theme
         emit({
           type: 'progress',

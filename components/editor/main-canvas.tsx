@@ -50,7 +50,7 @@ export function MainCanvas(): React.JSX.Element {
         {sections.length === 0 ? (
           <EmptyCanvasPlaceholder />
         ) : (
-          <div className="flex flex-col gap-[var(--sf-section-gap,32px)]">
+          <div className="flex flex-col gap-8">
             {resolvedSections.map((resolved, index) => {
               const section = sections[index];
               if (!section) return null;
@@ -130,12 +130,13 @@ function CanvasSection({
   return (
     <div
       className={cn(
-        'relative rounded-lg transition-all cursor-pointer',
+        'relative rounded-lg transition-all cursor-pointer bg-[var(--sf-color-background,#fff)] shadow-md overflow-hidden',
         isSelected
           ? 'ring-2 ring-primary ring-offset-2'
           : 'hover:ring-1 hover:ring-border hover:ring-offset-1',
         section.isHidden && 'opacity-50',
       )}
+      style={{ aspectRatio: '16 / 9' }}
       onClick={handleSectionClick}
     >
       {/* Always render the real layout */}

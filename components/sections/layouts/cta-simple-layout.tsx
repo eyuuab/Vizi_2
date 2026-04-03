@@ -13,20 +13,20 @@ export function CtaSimpleLayout({ section }: CtaSimpleLayoutProps): React.JSX.El
 
   return (
     <BaseSection section={section}>
-      <div className="flex flex-col items-center justify-center text-center min-h-[200px]">
+      <div className="flex flex-col items-center justify-center text-center h-full py-16">
         <SlotRenderer
           slotId="heading"
           slotType="HEADING"
           content={content['heading']}
           layoutId={layoutId}
-          className="text-[var(--sf-text-3xl)] mb-4"
+          className="text-[clamp(1.75rem,3.5vw,3rem)] leading-tight mb-6 font-bold"
         />
         <SlotRenderer
           slotId="subtext"
           slotType="TEXT"
           content={content['subtext']}
           layoutId={layoutId}
-          className="text-[var(--sf-text-lg)] text-[var(--sf-color-text-secondary)] mb-8 max-w-xl"
+          className="text-[clamp(1rem,1.5vw,1.25rem)] text-[var(--sf-color-text-secondary)] mb-10 max-w-2xl leading-relaxed"
         />
         <SlotRenderer
           slotId="ctaUrl"

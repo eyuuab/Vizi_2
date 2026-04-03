@@ -38,11 +38,11 @@ export function ImageSlot({
       >
         <div className="flex flex-col items-center gap-2 p-4">
           <svg
-            className="h-8 w-8 opacity-40"
+            className="h-8 w-8 mb-1 text-[var(--sf-color-primary,#3b82f6)] opacity-70"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
-            strokeWidth={1.5}
+            strokeWidth={1.2}
           >
             <path
               strokeLinecap="round"
@@ -50,9 +50,16 @@ export function ImageSlot({
               d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5a1.5 1.5 0 001.5-1.5V4.5a1.5 1.5 0 00-1.5-1.5H3.75a1.5 1.5 0 00-1.5 1.5v15a1.5 1.5 0 001.5 1.5z"
             />
           </svg>
-          <span className="text-center max-w-[200px] opacity-60">
-            {placeholder ?? (src ? src : 'Add image')}
-          </span>
+          <div className="flex flex-col items-center gap-1.5 text-center max-w-[280px]">
+            <span className="font-medium text-[var(--sf-color-text-primary)]">
+              {placeholder ?? "Select Image"}
+            </span>
+            {src && !isImageUrl(src) && (
+              <span className="text-xs text-[var(--sf-color-text-secondary)] italic leading-tight px-4 py-1.5 bg-[var(--sf-color-surface-hover,#ffffff)] bg-opacity-50 rounded-full border border-[var(--sf-color-border,#e5e7eb)] shadow-sm">
+                Suggesting: {src}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     );

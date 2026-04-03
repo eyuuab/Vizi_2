@@ -13,19 +13,21 @@ export function DataStatsLayout({ section }: DataStatsLayoutProps): React.JSX.El
 
   return (
     <BaseSection section={section}>
-      <SlotRenderer
-        slotId="heading"
-        slotType="HEADING"
-        content={content['heading']}
-        layoutId={layoutId}
-        className="text-[var(--sf-text-2xl)] mb-6 text-center"
-      />
-      <SlotRenderer
-        slotId="stats"
-        slotType="STATS"
-        content={content['stats']}
-        layoutId={layoutId}
-      />
+      <div className="flex flex-col justify-center h-full py-8">
+        <SlotRenderer
+          slotId="heading"
+          slotType="HEADING"
+          content={content['heading']}
+          layoutId={layoutId}
+          className="text-[clamp(1.25rem,2.2vw,1.75rem)] leading-tight mb-10 text-center font-bold"
+        />
+        <SlotRenderer
+          slotId="stats"
+          slotType="STATS"
+          content={content['stats']}
+          layoutId={layoutId}
+        />
+      </div>
     </BaseSection>
   );
 }
