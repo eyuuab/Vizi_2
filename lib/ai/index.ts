@@ -1,16 +1,27 @@
 /**
- * AI Pipeline — Section 6
+ * AI Pipeline — Section 7
  *
  * Multi-step AI pipeline for presentation generation.
- * Full implementation in Phase 4 (AI Integration).
+ * Provider-agnostic: supports Anthropic Claude and OpenAI GPT-4.
  *
- * Exports:
- * - generateOutline(prompt, options): AsyncGenerator<Outline>
- * - assignLayouts(outline, layouts): AsyncGenerator<LayoutAssignments>
- * - generateContent(outline, layouts): AsyncGenerator<GeneratedContent>
- * - suggestImages(content): AsyncGenerator<ImageSuggestions>
- * - suggestTheme(topic): AsyncGenerator<ThemeSuggestion>
- * - refineContent(sections, feedback): AsyncGenerator<GeneratedContent>
+ * Pipeline flow:
+ * 1. generateOutline(prompt, options) → Outline
+ * 2. assignLayouts(outline, layouts) → LayoutAssignments
+ * 3. generateContent(outline, layouts) → SectionContentGenerated[]
+ * 4. processImageSlots(sections) → SectionContentGenerated[] (with images)
+ * 5. selectTheme(topic) → ThemeSuggestion
  */
 
-export {};
+export { getProvider, generateTextWithRetry, generateStreamWithRetry } from './providers';
+export {
+  generateOutline,
+  assignLayouts,
+  generateAllContent,
+  generateSectionContent,
+  processImageSlots,
+  searchImage,
+  selectTheme,
+  createGenerationStream,
+  runPipeline,
+} from './pipeline';
+export type { PipelineResult } from './pipeline';

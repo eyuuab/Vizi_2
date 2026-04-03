@@ -117,7 +117,7 @@ export function TiptapEditor({
   // Update content from external changes (e.g., undo/redo)
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content || '', false);
+      editor.commands.setContent(content || '', { emitUpdate: false });
     }
   }, [content, editor]);
 

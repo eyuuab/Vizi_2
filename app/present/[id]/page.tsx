@@ -2,12 +2,24 @@ import type { Metadata } from 'next';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { redirect, notFound } from 'next/navigation';
+import { composePresentation } from '@/lib/composer';
+import type { SectionInput } from '@/lib/composer';
+import { resolveThemeTokens } from '@/lib/themes';
+import { ThemeTokensSchema } from '@/types/theme';
+import {
+  SectionContentSchema,
+  StyleOverridesSchema,
+  TransitionConfigSchema,
+} from '@/types/presentation';
+import { SlideshowViewer } from '@/components/presentation/slideshow-viewer';
 
 interface PresentPageProps {
   params: Promise<{ id: string }>;
 }
 
-export async function generateMetadata({ params }: PresentPageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PresentPageProps): Promise<Metadata> {
   const { id } = await params;
   try {
     const presentation = await prisma.presentation.findUnique({
@@ -22,7 +34,9 @@ export async function generateMetadata({ params }: PresentPageProps): Promise<Me
   }
 }
 
-export default async function PresentPage({ params }: PresentPageProps) {
+export default async function PresentPage({
+  params,
+}: PresentPageProps): Promise<React.JSX.Element> {
   const session = await auth();
   if (!session?.user?.id) {
     redirect('/login');
@@ -30,38 +44,83 @@ export default async function PresentPage({ params }: PresentPageProps) {
 
   const { id } = await params;
 
-  let presentation: {
-    id: string;
-    title: string;
-    userId: string;
-  } | null = null;
-
-  try {
-    presentation = await prisma.presentation.findUnique({
-      where: { id },
-      select: { id: true, title: true, userId: true },
-    });
-  } catch {
-    // Database might not be available
-  }
-
-  if (presentation && presentation.userId !== session.user.id) {
-    redirect('/dashboard');
-  }
+  const presentation = await prisma.presentation.findUnique({
+    where: { id },
+    include: {
+      sections: { orderBy: { order: 'asc' } },
+      theme: true,
+    },
+  });
 
   if (!presentation) {
     notFound();
   }
 
-  return (
-    <div className="flex h-screen items-center justify-center bg-black text-white">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">{presentation.title}</h1>
-        <p className="text-lg text-gray-400">
-          Full-screen presentation mode with keyboard navigation will be implemented in Phase 5.
-        </p>
-        <p className="mt-8 text-sm text-gray-500">Press Escape to exit</p>
+  if (presentation.userId !== session.user.id) {
+    redirect('/dashboard');
+  }
+
+  // Parse theme tokens
+  const themeTokensParsed = ThemeTokensSchema.safeParse(
+    presentation.theme.tokens,
+  );
+  if (!themeTokensParsed.success) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-black text-white">
+        <p>Error: Invalid theme configuration.</p>
       </div>
-    </div>
+    );
+  }
+  const themeTokens = themeTokensParsed.data;
+
+  // Build section inputs
+  const sectionInputs: SectionInput[] = presentation.sections.map(
+    (section) => {
+      const contentParsed = SectionContentSchema.safeParse(section.content);
+      const styleOverridesParsed = StyleOverridesSchema.safeParse(
+        section.styleOverrides,
+      );
+      const transitionsParsed = TransitionConfigSchema.safeParse(
+        section.transitions,
+      );
+
+      return {
+        id: section.id,
+        layoutId: section.layoutId,
+        order: section.order,
+        content: contentParsed.success ? contentParsed.data : {},
+        styleOverrides: styleOverridesParsed.success
+          ? styleOverridesParsed.data
+          : undefined,
+        transitions: transitionsParsed.success
+          ? transitionsParsed.data
+          : undefined,
+        notes: section.notes,
+        isHidden: section.isHidden,
+      };
+    },
+  );
+
+  // Compose the presentation
+  const composed = composePresentation(
+    presentation.id,
+    presentation.title,
+    presentation.description,
+    sectionInputs,
+    themeTokens,
+  );
+
+  // Filter visible sections for slides
+  const visibleSections = composed.sections.filter((s) => !s.isHidden);
+
+  // Resolve theme CSS variables
+  const themeVars = resolveThemeTokens(themeTokens);
+
+  return (
+    <SlideshowViewer
+      slides={visibleSections}
+      title={presentation.title}
+      themeVars={themeVars}
+    />
   );
 }

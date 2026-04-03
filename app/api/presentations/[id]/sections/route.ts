@@ -64,7 +64,7 @@ export async function POST(
         presentationId: id,
         layoutId: parsed.data.layoutId,
         order: parsed.data.order,
-        content: (parsed.data.content ?? {}) as Record<string, unknown>,
+        content: JSON.parse(JSON.stringify(parsed.data.content ?? {})) as Parameters<typeof prisma.section.create>[0]['data']['content'],
       },
     });
 
