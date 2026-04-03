@@ -18,14 +18,14 @@ import { AIProviderError } from '@/types/ai';
 import { generateOutline } from './outline-generator';
 import { assignLayouts } from './layout-assigner';
 import { generateAllContent, generateSectionContent } from './content-generator';
-import { processImageSlots, searchImage } from './image-handler';
+import { clearImageSlots, processImageSlots } from './image-handler';
 import { selectTheme } from './theme-selector';
 import { getLayout } from '@/lib/layouts';
 
 export { generateOutline } from './outline-generator';
 export { assignLayouts } from './layout-assigner';
 export { generateAllContent, generateSectionContent } from './content-generator';
-export { processImageSlots, searchImage } from './image-handler';
+export { clearImageSlots, processImageSlots, searchImage } from './image-handler';
 export { selectTheme } from './theme-selector';
 
 // ============================================================
@@ -165,9 +165,14 @@ export function createGenerationStream(
         }
 
         // Step 4: Process images
+        const includeImages = request.includeImages !== false;
         emit({
           type: 'progress',
-          data: { step: 'images', progress: 80, message: 'Finding images...' },
+          data: {
+            step: 'images',
+            progress: 80,
+            message: includeImages ? 'Finding images...' : 'Skipping images (disabled)',
+          },
           timestamp: Date.now(),
         });
 
@@ -176,7 +181,9 @@ export function createGenerationStream(
           return;
         }
 
-        const sectionsWithImages = await processImageSlots(sections);
+        const sectionsWithImages = includeImages
+          ? await processImageSlots(sections)
+          : clearImageSlots(sections);
 
         // Step 5: Select theme
         emit({
@@ -263,7 +270,10 @@ export async function runPipeline(
     layoutAssignments,
     request.tone ?? 'professional',
   );
-  const sectionsWithImages = await processImageSlots(sections);
+  const sectionsWithImages =
+    request.includeImages === false
+      ? clearImageSlots(sections)
+      : await processImageSlots(sections);
   const theme = await selectTheme(
     provider,
     outline.title,

@@ -8,15 +8,36 @@ interface ListSlotProps {
   placeholder?: string;
 }
 
-function parseListItems(content: unknown): string[] {
+interface ListItem {
+  label: string;
+  description?: string;
+}
+
+function parseListItems(content: unknown): ListItem[] {
   if (Array.isArray(content)) {
-    return content.filter((item): item is string => typeof item === 'string');
+    return content
+      .map((item) => {
+        if (typeof item === 'string') {
+          return { label: item };
+        }
+        if (typeof item === 'object' && item !== null && 'label' in item) {
+          return {
+            label: String((item as Record<string, unknown>).label),
+            description: (item as Record<string, unknown>).description
+              ? String((item as Record<string, unknown>).description)
+              : undefined,
+          };
+        }
+        return null;
+      })
+      .filter((item): item is ListItem => item !== null);
   }
   if (typeof content === 'string') {
     return content
       .split('\n')
       .map((line) => line.trim())
-      .filter((line) => line.length > 0);
+      .filter((line) => line.length > 0)
+      .map((line) => ({ label: line }));
   }
   return [];
 }
@@ -35,14 +56,21 @@ export function ListSlot({ content, className, placeholder }: ListSlotProps): Re
   return (
     <ul
       className={cn(
-        'list-disc pl-5 space-y-2',
+        'list-disc pl-5 space-y-3',
         'font-[var(--sf-font-body)] text-[var(--sf-color-text-primary)]',
         'leading-[var(--sf-line-height)]',
         className,
       )}
     >
       {items.map((item, index) => (
-        <li key={`${item.slice(0, 20)}-${String(index)}`}>{item}</li>
+        <li key={`${item.label.slice(0, 20)}-${String(index)}`}>
+          <span className="font-semibold">{item.label}</span>
+          {item.description && (
+            <p className="mt-0.5 text-[var(--sf-color-text-secondary)] text-[0.9em]">
+              {item.description}
+            </p>
+          )}
+        </li>
       ))}
     </ul>
   );

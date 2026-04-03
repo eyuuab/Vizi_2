@@ -154,6 +154,7 @@ export const GenerateRequestSchema = z.object({
   audience: z.string().max(200).optional(),
   sectionCount: z.number().min(3).max(20).optional(),
   detailLevel: z.enum(DETAIL_LEVELS).optional(),
+  includeImages: z.boolean().optional(),
   provider: AIProviderNameSchema.optional(),
   theme: z.string().optional(),
 });

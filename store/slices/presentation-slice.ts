@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { SectionContent, StyleOverrides, TransitionConfig } from '@/types/presentation';
+import { LAYOUT_REGISTRY } from '@/lib/layouts';
 
 export interface SectionState {
   id: string;
@@ -131,6 +132,74 @@ export const presentationSlice = createSlice({
     updateSectionLayout(state, action: PayloadAction<{ sectionId: string; layoutId: string }>) {
       const section = state.sections.find((s) => s.id === action.payload.sectionId);
       if (section) {
+        const newLayout = LAYOUT_REGISTRY[action.payload.layoutId];
+        if (newLayout) {
+          const oldContent = section.content;
+          const newContent: SectionContent = {};
+
+          // Build lookup of old content by slot type
+          const oldLayout = LAYOUT_REGISTRY[section.layoutId];
+          const oldSlotTypes: Record<string, string> = {};
+          if (oldLayout) {
+            for (const slot of oldLayout.slots) {
+              oldSlotTypes[slot.id] = slot.type;
+            }
+          }
+
+          // Group old content by type for fallback matching
+          const textValues: string[] = []; // HEADING, TEXT, RICHTEXT
+          const imageValues: string[] = [];
+          const listValues: unknown[] = [];
+
+          for (const [slotId, value] of Object.entries(oldContent)) {
+            const type = oldSlotTypes[slotId];
+            if (type === 'HEADING' || type === 'TEXT' || type === 'RICHTEXT') {
+              if (typeof value === 'string' && value) textValues.push(value);
+            } else if (type === 'IMAGE') {
+              if (typeof value === 'string' && value) imageValues.push(value);
+            } else if (type === 'LIST') {
+              if (value) listValues.push(value);
+            }
+          }
+
+          let textIdx = 0;
+          let imageIdx = 0;
+          let listIdx = 0;
+
+          for (const slot of newLayout.slots) {
+            // 1. Direct match: same slot id exists in old content
+            const directMatch = oldContent[slot.id];
+            if (directMatch !== undefined) {
+              newContent[slot.id] = directMatch as string | Record<string, unknown> | unknown[];
+              continue;
+            }
+
+            // 2. Type-based fallback: find unused content of matching type
+            if ((slot.type === 'HEADING' || slot.type === 'TEXT' || slot.type === 'RICHTEXT') && textIdx < textValues.length) {
+              newContent[slot.id] = textValues[textIdx++] as string;
+              continue;
+            }
+            if (slot.type === 'IMAGE' && imageIdx < imageValues.length) {
+              newContent[slot.id] = imageValues[imageIdx++] as string;
+              continue;
+            }
+            if (slot.type === 'LIST' && listIdx < listValues.length) {
+              newContent[slot.id] = listValues[listIdx++] as unknown[];
+              continue;
+            }
+
+            // 3. Use layout default content
+            const defaultVal = newLayout.defaultContent[slot.id];
+            if (defaultVal !== undefined) {
+              newContent[slot.id] = defaultVal as string | Record<string, unknown> | unknown[];
+              continue;
+            }
+
+            // 4. Leave empty — slot will show placeholder
+          }
+
+          section.content = newContent;
+        }
         section.layoutId = action.payload.layoutId;
         state.isDirty = true;
       }

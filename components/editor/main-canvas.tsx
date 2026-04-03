@@ -138,11 +138,12 @@ function CanvasSection({
       )}
       onClick={handleSectionClick}
     >
-      {/* Section renderer for display */}
-      {!isSelected || !isEditing ? (
-        <SectionRenderer section={resolved} />
-      ) : (
-        <EditableSectionView
+      {/* Always render the real layout */}
+      <SectionRenderer section={resolved} />
+
+      {/* Editable overlay when selected + editing */}
+      {isSelected && isEditing && layout && (
+        <EditableSlotOverlay
           section={section}
           layout={layout}
           selectedSlotId={selectedSlotId}
@@ -162,88 +163,92 @@ function CanvasSection({
 }
 
 // ============================================================
-// Editable Section View
+// Editable Slot Overlay
 // ============================================================
+// Shows an absolute overlay on top of the rendered layout
+// that makes text slots clickable and editable inline.
 
-interface EditableSectionViewProps {
+interface EditableSlotOverlayProps {
   section: SectionState;
-  layout: LayoutTemplate | null;
+  layout: LayoutTemplate;
   selectedSlotId: string | null;
   onSelectSlot: (slotId: string) => void;
   onUpdateSlot: (slotId: string, content: string) => void;
 }
 
-function EditableSectionView({
+function EditableSlotOverlay({
   section,
   layout,
   selectedSlotId,
   onSelectSlot,
   onUpdateSlot,
-}: EditableSectionViewProps): React.JSX.Element {
-  if (!layout) {
-    return (
-      <div className="p-8 text-center text-muted-foreground">
-        Unknown layout: {section.layoutId}
-      </div>
-    );
-  }
-
-  // Render a simplified editable version using TiptapEditor for text-based slots
+}: EditableSlotOverlayProps): React.JSX.Element {
   const textSlotTypes = new Set(['TEXT', 'RICHTEXT', 'HEADING']);
+  const interactiveSlots = layout.slots.filter(
+    (s) => textSlotTypes.has(s.type) || s.type === 'IMAGE',
+  );
+
+  const selectedSlot = interactiveSlots.find((s) => s.id === selectedSlotId);
+  const selectedSlotIsText = Boolean(selectedSlot && textSlotTypes.has(selectedSlot.type));
+  const selectedContent =
+    selectedSlot && typeof section.content[selectedSlot.id] === 'string'
+      ? (section.content[selectedSlot.id] as string)
+      : '';
 
   return (
-    <div
-      className="relative w-full py-[var(--sf-section-padding-top,48px)] px-[var(--sf-section-padding-left,48px)]"
-      style={section.styleOverrides?.backgroundColor ? { backgroundColor: section.styleOverrides.backgroundColor } : undefined}
-    >
-      <div className="mx-auto w-full max-w-[var(--sf-max-width,960px)]">
-        <div className="flex flex-col gap-[var(--sf-slot-gap,16px)]">
-          {layout.slots.map((slot) => {
-            const content = section.content[slot.id];
-            const isText = textSlotTypes.has(slot.type);
-            const isSelectedSlot = selectedSlotId === slot.id;
-
-            if (isText) {
-              const textContent = typeof content === 'string' ? content : '';
-              return (
-                <div
-                  key={slot.id}
-                  className={cn(
-                    'rounded-md transition-all p-1 -m-1',
-                    isSelectedSlot
-                      ? 'ring-2 ring-primary/50 bg-primary/5'
-                      : 'hover:ring-1 hover:ring-border',
-                  )}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectSlot(slot.id);
-                  }}
-                >
-                  <TiptapEditor
-                    content={textContent}
-                    placeholder={slot.label}
-                    maxLength={slot.constraints?.maxLength}
-                    isHeading={slot.type === 'HEADING'}
-                    onUpdate={(html) => onUpdateSlot(slot.id, html)}
-                    onFocus={() => onSelectSlot(slot.id)}
-                  />
-                </div>
-              );
-            }
-
-            // Non-text slots: show as-is
-            return (
-              <div
-                key={slot.id}
-                className="rounded-md border border-dashed border-muted-foreground/20 p-4 text-center text-xs text-muted-foreground"
-              >
-                {slot.label} ({slot.type})
-              </div>
-            );
-          })}
-        </div>
+    <>
+      {/* Transparent clickable overlay for text/image slots */}
+      <div className="absolute inset-0 z-10">
+        {interactiveSlots.map((slot) => {
+          const pos = slot.position;
+          const isSelected = selectedSlotId === slot.id;
+          const isTextSlot = textSlotTypes.has(slot.type);
+          return (
+            <div
+              key={slot.id}
+              className={cn(
+                'absolute rounded transition-all',
+                isTextSlot ? 'cursor-text' : 'cursor-pointer',
+                isSelected
+                  ? 'ring-2 ring-primary/60 bg-primary/5'
+                  : 'hover:ring-1 hover:ring-primary/30 hover:bg-primary/5',
+              )}
+              style={{
+                left: `${String(pos.x)}%`,
+                top: `${String(pos.y)}%`,
+                width: `${String(pos.width)}%`,
+                height: `${String(pos.height)}%`,
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectSlot(slot.id);
+              }}
+            />
+          );
+        })}
       </div>
-    </div>
+
+      {/* Inline editor panel for the selected text slot */}
+      {selectedSlot && selectedSlotIsText && (
+        <div
+          className="relative z-20 mx-4 -mt-2 mb-2 rounded-lg border border-primary/20 bg-card p-4 shadow-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-medium">{selectedSlot.label}</span>
+            <span className="rounded bg-muted px-1.5 py-0.5">{selectedSlot.type}</span>
+          </div>
+          <TiptapEditor
+            content={selectedContent}
+            placeholder={selectedSlot.label}
+            maxLength={selectedSlot.constraints?.maxLength}
+            isHeading={selectedSlot.type === 'HEADING'}
+            onUpdate={(html) => onUpdateSlot(selectedSlot.id, html)}
+            onFocus={() => onSelectSlot(selectedSlot.id)}
+          />
+        </div>
+      )}
+    </>
   );
 }
 

@@ -106,6 +106,53 @@
   to { height: 0; }
 }
 
+/* ---- Rich text content styles (rendered HTML from AI / editor) ---- */
+
+.sf-richtext p {
+  margin-bottom: 0.5em;
+}
+.sf-richtext p:last-child {
+  margin-bottom: 0;
+}
+.sf-richtext ul,
+.sf-richtext ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.5em;
+}
+.sf-richtext ul {
+  list-style-type: disc;
+}
+.sf-richtext ol {
+  list-style-type: decimal;
+}
+.sf-richtext li {
+  margin-bottom: 0.25em;
+}
+.sf-richtext strong,
+.sf-richtext b {
+  font-weight: 700;
+}
+.sf-richtext em,
+.sf-richtext i {
+  font-style: italic;
+}
+.sf-richtext a {
+  color: var(--sf-color-primary, hsl(var(--primary)));
+  text-decoration: underline;
+}
+.sf-richtext blockquote {
+  border-left: 3px solid var(--sf-color-primary, hsl(var(--primary)));
+  padding-left: 1em;
+  margin: 0.5em 0;
+  font-style: italic;
+}
+.sf-richtext h1,
+.sf-richtext h2,
+.sf-richtext h3 {
+  font-weight: 700;
+  margin-bottom: 0.25em;
+}
+
 /* ---- Base styles ---- */
 
 * {

@@ -85,6 +85,36 @@ export async function processImageSlots(
 }
 
 /**
+ * Clears IMAGE slot values across all generated sections.
+ * Used when image generation is disabled in the request.
+ */
+export function clearImageSlots(
+  sections: SectionContentGenerated[],
+): SectionContentGenerated[] {
+  return sections.map((section) => {
+    let layout: LayoutTemplate;
+    try {
+      layout = getLayout(section.layoutId);
+    } catch {
+      return section;
+    }
+
+    const updatedContent: Record<string, unknown> = { ...section.content };
+
+    for (const slot of layout.slots) {
+      if (slot.type === 'IMAGE') {
+        updatedContent[slot.id] = '';
+      }
+    }
+
+    return {
+      ...section,
+      content: updatedContent,
+    };
+  });
+}
+
+/**
  * Search for an image using the Unsplash API.
  * Falls back to a placeholder if the API key is not configured.
  */

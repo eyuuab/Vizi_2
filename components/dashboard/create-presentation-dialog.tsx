@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -111,6 +112,7 @@ export function CreatePresentationDialog({ trigger }: CreatePresentationDialogPr
   const [slideCount, setSlideCount] = useState(8);
   const [detailLevel, setDetailLevel] = useState<DetailLevel>('detailed');
   const [tone, setTone] = useState('professional');
+  const [includeImages, setIncludeImages] = useState(true);
 
   // Generation state
   const [phase, setPhase] = useState<GenerationPhase>('outline');
@@ -120,7 +122,6 @@ export function CreatePresentationDialog({ trigger }: CreatePresentationDialogPr
   const [errorRetryable, setErrorRetryable] = useState(false);
   const [outline, setOutline] = useState<Outline | null>(null);
   const [sections, setSections] = useState<SectionContentGenerated[]>([]);
-  const [themePresetId, setThemePresetId] = useState<string | undefined>();
   const [savingPresentation, setSavingPresentation] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -167,7 +168,6 @@ export function CreatePresentationDialog({ trigger }: CreatePresentationDialogPr
     setErrorMessage('');
     setOutline(null);
     setSections([]);
-    setThemePresetId(undefined);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -181,6 +181,7 @@ export function CreatePresentationDialog({ trigger }: CreatePresentationDialogPr
           tone,
           sectionCount: slideCount,
           detailLevel,
+          includeImages,
         }),
         signal: controller.signal,
       });
@@ -203,7 +204,6 @@ export function CreatePresentationDialog({ trigger }: CreatePresentationDialogPr
       let buffer = '';
       let collectedOutline: Outline | null = null;
       const collectedSections: SectionContentGenerated[] = [];
-      let collectedThemeId: string | undefined;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -250,9 +250,6 @@ export function CreatePresentationDialog({ trigger }: CreatePresentationDialogPr
               break;
             }
             case 'theme': {
-              const themeData = event.data as { presetId?: string };
-              collectedThemeId = themeData.presetId;
-              setThemePresetId(collectedThemeId);
               break;
             }
             case 'complete': {
@@ -344,7 +341,7 @@ export function CreatePresentationDialog({ trigger }: CreatePresentationDialogPr
     } finally {
       abortControllerRef.current = null;
     }
-  }, [prompt, tone, slideCount, detailLevel, title, router]);
+  }, [prompt, tone, slideCount, detailLevel, title, router, includeImages]);
 
   const handleCancel = useCallback(() => {
     if (abortControllerRef.current) {
@@ -367,13 +364,13 @@ export function CreatePresentationDialog({ trigger }: CreatePresentationDialogPr
     setSlideCount(8);
     setDetailLevel('detailed');
     setTone('professional');
+    setIncludeImages(true);
     setPhase('outline');
     setProgress(0);
     setProgressMessage('');
     setErrorMessage('');
     setOutline(null);
     setSections([]);
-    setThemePresetId(undefined);
     setBlankTitle('');
     setActiveTab('ai');
   }
@@ -539,6 +536,22 @@ export function CreatePresentationDialog({ trigger }: CreatePresentationDialogPr
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="ai-include-images">Add AI images</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Enable to auto-generate images for IMAGE slots.
+                      </p>
+                    </div>
+                    <Switch
+                      id="ai-include-images"
+                      checked={includeImages}
+                      onCheckedChange={setIncludeImages}
+                    />
+                  </div>
                 </div>
 
                 <DialogFooter>

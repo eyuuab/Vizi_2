@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -86,6 +87,7 @@ export function AIGenerationDialog({
 }: AIGenerationDialogProps): React.JSX.Element {
   const [prompt, setPrompt] = React.useState('');
   const [tone, setTone] = React.useState<string>('professional');
+  const [includeImages, setIncludeImages] = React.useState(true);
   const [step, setStep] = React.useState<GenerationStep>('idle');
   const [progress, setProgress] = React.useState(0);
   const [progressMessage, setProgressMessage] = React.useState('');
@@ -119,6 +121,7 @@ export function AIGenerationDialog({
         body: JSON.stringify({
           prompt: prompt.trim(),
           tone,
+          includeImages,
         }),
         signal: controller.signal,
       });
@@ -237,7 +240,7 @@ export function AIGenerationDialog({
     } finally {
       abortControllerRef.current = null;
     }
-  }, [prompt, tone, isGenerating]);
+  }, [prompt, tone, includeImages, isGenerating]);
 
   const handleCancel = React.useCallback(() => {
     if (abortControllerRef.current) {
@@ -329,6 +332,25 @@ export function AIGenerationDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-1">
+                <label htmlFor="ai-include-images" className="text-sm font-medium">
+                  Add AI images
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  Enable to auto-fill image slots with generated images.
+                </p>
+              </div>
+              <Switch
+                id="ai-include-images"
+                checked={includeImages}
+                onCheckedChange={setIncludeImages}
+                disabled={isGenerating}
+              />
+            </div>
           </div>
 
           {/* Progress Display */}
