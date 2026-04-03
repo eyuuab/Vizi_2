@@ -12,7 +12,6 @@ import {
   Loader2,
   CloudOff,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -26,20 +25,29 @@ import { setMode } from '@/store/slices/editor-slice';
 import { setTitle } from '@/store/slices/presentation-slice';
 import { setExportDialogOpen, setShareDialogOpen } from '@/store/slices/ui-slice';
 import { undo, redo, canUndo, canRedo } from '@/store/undo-middleware';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface TopBarProps {
-  onSave: () => void;
+  onSave: () => Promise<void>;
 }
 
 export function TopBar({ onSave }: TopBarProps): React.JSX.Element {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const title = useAppSelector((state) => state.presentation.title);
   const isSaving = useAppSelector((state) => state.editor.isSaving);
   const isDirty = useAppSelector((state) => state.presentation.isDirty);
+  const isThemeCustomized = useAppSelector((state) => state.theme.isCustomized);
   const lastSavedAt = useAppSelector((state) => state.editor.lastSavedAt);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(title);
+
+  const handleBackToDashboard = useCallback(async () => {
+    if (isDirty || isSaving || isThemeCustomized) {
+      await onSave();
+    }
+    router.push('/dashboard');
+  }, [isDirty, isSaving, isThemeCustomized, onSave, router]);
 
   const handleTitleSubmit = useCallback(() => {
     const trimmed = titleDraft.trim();
@@ -78,10 +86,13 @@ export function TopBar({ onSave }: TopBarProps): React.JSX.Element {
       <div className="flex items-center gap-2 min-w-0">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
-              <Link href="/dashboard">
-                <ChevronLeft className="h-4 w-4" />
-              </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => void handleBackToDashboard()}
+            >
+              <ChevronLeft className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Back to Dashboard</TooltipContent>
@@ -119,7 +130,7 @@ export function TopBar({ onSave }: TopBarProps): React.JSX.Element {
               <Loader2 className="h-3 w-3 animate-spin" />
               <span>Saving...</span>
             </>
-          ) : isDirty ? (
+          ) : isDirty || isThemeCustomized ? (
             <>
               <CloudOff className="h-3 w-3" />
               <span>Unsaved changes</span>

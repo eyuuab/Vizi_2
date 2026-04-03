@@ -233,12 +233,14 @@ export function SlideshowViewer({
       >
         {currentSection && (
           <div className="sf-slide-frame relative w-full h-full flex items-center justify-center overflow-hidden">
-            <div className="sf-slide-surface relative bg-[var(--sf-color-background,#fff)] shadow-2xl overflow-hidden flex flex-col justify-center"
+            <div className="sf-slide-surface relative shadow-2xl overflow-hidden flex flex-col justify-center"
               style={{
                 aspectRatio: '16 / 9',
                 width: '100%',
                 maxHeight: '100vh',
                 maxWidth: `calc(100vh * 16 / 9)`,
+                background:
+                  'var(--sf-slide-background, var(--sf-color-background, #fff))',
               }}
             >
               <SectionRenderer section={currentSection} />

@@ -85,6 +85,9 @@ export const themeSlice = createSlice({
       state.activeTokens = action.payload;
       state.isCustomized = true;
     },
+    markThemeSaved(state) {
+      state.isCustomized = false;
+    },
     resetTheme(state) {
       state.activeTokens = null;
       state.presetId = null;
@@ -100,6 +103,7 @@ export const {
   updateSpacingToken,
   updateLayoutToken,
   setFullTokens,
+  markThemeSaved,
   resetTheme,
 } = themeSlice.actions;
 

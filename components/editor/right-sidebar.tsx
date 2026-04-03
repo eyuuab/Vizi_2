@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { setRightPanelView } from '@/store/slices/editor-slice';
+import { setRightPanelView, selectSlot, setEditing } from '@/store/slices/editor-slice';
 import {
   setThemeId,
   updateSectionLayout,
@@ -931,8 +931,73 @@ function LayoutMiniPreview({ layoutId }: { layoutId: string }): React.JSX.Elemen
 }
 
 // ============================================================
-// Text Formatting Panel
+// Text Formatting / Slot Edit Panel
 // ============================================================
+
+/** Layout variant suggestions: when user is on one layout, suggest related simpler/complex ones */
+const LAYOUT_VARIANTS: Record<string, { id: string; label: string }[]> = {
+  'comparison-three': [{ id: 'comparison-two', label: 'Switch to 2 Columns' }],
+  'comparison-two': [{ id: 'comparison-three', label: 'Switch to 3 Columns' }],
+  'content-two-column': [
+    { id: 'content-text', label: 'Switch to Single Column' },
+    { id: 'content-text-image', label: 'Switch to Text + Image' },
+  ],
+  'content-text': [
+    { id: 'content-two-column', label: 'Switch to Two Columns' },
+    { id: 'content-text-image', label: 'Add Image Column' },
+  ],
+  'content-text-image': [
+    { id: 'content-image-text', label: 'Swap Image Side' },
+    { id: 'content-text', label: 'Remove Image' },
+  ],
+  'content-image-text': [
+    { id: 'content-text-image', label: 'Swap Image Side' },
+    { id: 'content-text', label: 'Remove Image' },
+  ],
+  'hero-split': [
+    { id: 'hero-center', label: 'Switch to Centered' },
+    { id: 'hero-gradient', label: 'Switch to Gradient' },
+  ],
+  'hero-center': [
+    { id: 'hero-split', label: 'Switch to Split' },
+    { id: 'hero-gradient', label: 'Switch to Gradient' },
+  ],
+  'hero-gradient': [
+    { id: 'hero-center', label: 'Switch to Centered' },
+    { id: 'hero-split', label: 'Switch to Split' },
+  ],
+  'data-stats': [
+    { id: 'data-chart', label: 'Switch to Chart' },
+    { id: 'data-table', label: 'Switch to Table' },
+  ],
+  'data-chart': [
+    { id: 'data-stats', label: 'Switch to Stats' },
+    { id: 'data-table', label: 'Switch to Table' },
+  ],
+  'data-table': [
+    { id: 'data-stats', label: 'Switch to Stats' },
+    { id: 'data-chart', label: 'Switch to Chart' },
+  ],
+  'timeline-vertical': [{ id: 'timeline-horizontal', label: 'Switch to Horizontal' }],
+  'timeline-horizontal': [{ id: 'timeline-vertical', label: 'Switch to Vertical' }],
+  'media-full': [{ id: 'media-gallery', label: 'Switch to Gallery' }],
+  'media-gallery': [{ id: 'media-full', label: 'Switch to Full Image' }],
+};
+
+const SLOT_TYPE_ICONS: Record<string, string> = {
+  HEADING: 'H',
+  TEXT: 'T',
+  RICHTEXT: 'R',
+  IMAGE: 'I',
+  LIST: 'L',
+  STATS: 'S',
+  CHART: 'C',
+  CONFIG: 'G',
+  URL: 'U',
+  VIDEO: 'V',
+  MERMAID: 'M',
+  TABLE: 'B',
+};
 
 function TextFormattingPanel(): React.JSX.Element {
   const dispatch = useAppDispatch();
@@ -948,15 +1013,19 @@ function TextFormattingPanel(): React.JSX.Element {
     ? sections.find((section) => section.id === selectedSectionId)
     : null;
 
-  const selectedSlot = useMemo(() => {
-    if (!selectedSection || !selectedSlotId) return null;
+  const currentLayout = useMemo(() => {
+    if (!selectedSection) return null;
     try {
-      const layout = getLayout(selectedSection.layoutId);
-      return layout.slots.find((slot) => slot.id === selectedSlotId) ?? null;
+      return getLayout(selectedSection.layoutId);
     } catch {
       return null;
     }
-  }, [selectedSection, selectedSlotId]);
+  }, [selectedSection]);
+
+  const selectedSlot = useMemo(() => {
+    if (!currentLayout || !selectedSlotId) return null;
+    return currentLayout.slots.find((slot) => slot.id === selectedSlotId) ?? null;
+  }, [currentLayout, selectedSlotId]);
 
   const selectedImageValue =
     selectedSlot?.type === 'IMAGE' &&
@@ -978,13 +1047,11 @@ function TextFormattingPanel(): React.JSX.Element {
 
   const applyImageUrl = useCallback(() => {
     if (!selectedSection || !selectedSlot || selectedSlot.type !== 'IMAGE') return;
-
-    const nextUrl = imageUrlDraft.trim();
     dispatch(
       updateSectionSlotContent({
         sectionId: selectedSection.id,
         slotId: selectedSlot.id,
-        content: nextUrl,
+        content: imageUrlDraft.trim(),
       }),
     );
     setImageError('');
@@ -1040,26 +1107,140 @@ function TextFormattingPanel(): React.JSX.Element {
     }
   }, [dispatch, imagePrompt, selectedSection, selectedSlot]);
 
-  if (!selectedSlotId) {
+  const handleClearSlot = useCallback(
+    (slotId: string, slotType: string) => {
+      if (!selectedSection) return;
+      let emptyValue: string | unknown[] | Record<string, unknown> = '';
+      if (slotType === 'LIST' || slotType === 'STATS') emptyValue = [];
+      else if (slotType === 'CHART' || slotType === 'CONFIG') emptyValue = {};
+      dispatch(
+        updateSectionSlotContent({
+          sectionId: selectedSection.id,
+          slotId,
+          content: emptyValue,
+        }),
+      );
+    },
+    [dispatch, selectedSection],
+  );
+
+  const handleSwitchLayout = useCallback(
+    (layoutId: string) => {
+      if (!selectedSectionId) return;
+      dispatch(updateSectionLayout({ sectionId: selectedSectionId, layoutId }));
+    },
+    [dispatch, selectedSectionId],
+  );
+
+  // No section selected at all
+  if (!selectedSection || !currentLayout) {
     return (
-      <div className="p-4 text-center">
-        <p className="text-xs text-muted-foreground">
-          Click on a text or image slot to edit it.
-        </p>
+      <div className="flex flex-col items-center justify-center p-8 gap-3 text-center">
+        <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+          <Type className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="text-sm font-medium">No section selected</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Click on a slide to edit its content
+          </p>
+        </div>
       </div>
     );
   }
 
-  if (!selectedSection || !selectedSlot) {
+  // Section selected but no specific slot - show slot overview
+  if (!selectedSlotId || !selectedSlot) {
+    const variants = LAYOUT_VARIANTS[selectedSection.layoutId] ?? [];
     return (
-      <div className="p-4 text-center">
-        <p className="text-xs text-muted-foreground">
-          Select a valid slot to edit.
-        </p>
+      <div className="p-3 space-y-4">
+        {/* Section slot overview */}
+        <div>
+          <Label className="text-xs font-semibold mb-2 block">
+            Slide Content ({currentLayout.slots.length} slots)
+          </Label>
+          <p className="text-[10px] text-muted-foreground mb-2">
+            Click a slot on the slide or below to edit it
+          </p>
+          <div className="space-y-1">
+            {currentLayout.slots.map((slot) => {
+              const hasContent = slotHasContent(selectedSection.content[slot.id], slot.type);
+              return (
+                <button
+                  key={slot.id}
+                  type="button"
+                  className={cn(
+                    'w-full flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-left transition-colors',
+                    'hover:bg-accent/50 hover:border-primary/30',
+                  )}
+                  onClick={() => {
+                    dispatch(selectSlot(slot.id));
+                    dispatch(setEditing(true));
+                  }}
+                >
+                  <span
+                    className={cn(
+                      'h-5 w-5 rounded text-[9px] font-bold flex items-center justify-center shrink-0',
+                      hasContent
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-muted text-muted-foreground',
+                    )}
+                  >
+                    {SLOT_TYPE_ICONS[slot.type] ?? '?'}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-xs font-medium truncate block">{slot.label}</span>
+                    <span className="text-[10px] text-muted-foreground">{slot.type}</span>
+                  </div>
+                  {hasContent && (
+                    <button
+                      type="button"
+                      className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClearSlot(slot.id, slot.type);
+                      }}
+                      title="Clear slot content"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Layout variant suggestions */}
+        {variants.length > 0 && (
+          <div>
+            <Label className="text-xs font-semibold mb-2 block">
+              Layout Variants
+            </Label>
+            <p className="text-[10px] text-muted-foreground mb-2">
+              Quickly switch to a related layout. Content is preserved automatically.
+            </p>
+            <div className="space-y-1">
+              {variants.map((variant) => (
+                <Button
+                  key={variant.id}
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start text-xs h-8 gap-2"
+                  onClick={() => handleSwitchLayout(variant.id)}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5 shrink-0" />
+                  {variant.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
+  // IMAGE slot editor
   if (selectedSlot.type === 'IMAGE') {
     return (
       <div className="p-3 space-y-4">
@@ -1133,6 +1314,61 @@ function TextFormattingPanel(): React.JSX.Element {
     );
   }
 
+  // LIST slot editor in sidebar
+  if (selectedSlot.type === 'LIST') {
+    const listItems = parseListContent(selectedSection.content[selectedSlot.id]);
+    return (
+      <div className="p-3 space-y-4">
+        <div>
+          <Label className="text-xs font-semibold mb-1 block">List Slot</Label>
+          <p className="text-xs text-muted-foreground">
+            {selectedSlot.label} — Edit items in the inline editor on the canvas, or use the layout variants below.
+          </p>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {listItems.length} items
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full text-xs gap-1.5"
+          onClick={() => handleClearSlot(selectedSlot.id, selectedSlot.type)}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Clear All Items
+        </Button>
+      </div>
+    );
+  }
+
+  // STATS slot editor in sidebar
+  if (selectedSlot.type === 'STATS') {
+    const statItems = parseStatsContent(selectedSection.content[selectedSlot.id]);
+    return (
+      <div className="p-3 space-y-4">
+        <div>
+          <Label className="text-xs font-semibold mb-1 block">Stats Slot</Label>
+          <p className="text-xs text-muted-foreground">
+            {selectedSlot.label} — Edit stats in the inline editor on the canvas.
+          </p>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {statItems.length} statistics
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full text-xs gap-1.5"
+          onClick={() => handleClearSlot(selectedSlot.id, selectedSlot.type)}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Clear All Stats
+        </Button>
+      </div>
+    );
+  }
+
+  // Default: text formatting info
   return (
     <div className="p-3 space-y-4">
       <div>
@@ -1166,4 +1402,28 @@ function TextFormattingPanel(): React.JSX.Element {
       </div>
     </div>
   );
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+
+function slotHasContent(content: unknown, slotType: string): boolean {
+  if (content === undefined || content === null) return false;
+  if (typeof content === 'string') return content.trim().length > 0;
+  if (Array.isArray(content)) return content.length > 0;
+  if (slotType === 'CHART' || slotType === 'CONFIG') {
+    return typeof content === 'object' && Object.keys(content as object).length > 0;
+  }
+  return false;
+}
+
+function parseListContent(content: unknown): unknown[] {
+  if (Array.isArray(content)) return content;
+  return [];
+}
+
+function parseStatsContent(content: unknown): unknown[] {
+  if (Array.isArray(content)) return content;
+  return [];
 }

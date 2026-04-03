@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/db';
@@ -15,6 +16,7 @@ const SavePayloadSchema = z.object({
   title: z.string().min(1).max(500),
   description: z.string().max(2000).nullable().optional(),
   themeId: z.string(),
+  themeTokens: z.unknown().optional(),
   sections: z.array(
     z.object({
       id: z.string(),
@@ -36,7 +38,9 @@ interface RouteParams {
 export async function POST(
   request: NextRequest,
   { params }: RouteParams,
-): Promise<NextResponse<ApiSuccessResponse<{ savedAt: string }> | ApiErrorResponse>> {
+): Promise<
+  NextResponse<ApiSuccessResponse<{ savedAt: string; themeId: string }> | ApiErrorResponse>
+> {
   try {
     const session = await auth();
     if (!session?.user?.id) {
@@ -45,12 +49,13 @@ export async function POST(
         { status: 401 },
       );
     }
+    const userId = session.user.id;
 
     const { id } = await params;
 
     const presentation = await prisma.presentation.findUnique({
       where: { id },
-      select: { userId: true },
+      select: { userId: true, themeId: true },
     });
 
     if (!presentation) {
@@ -60,7 +65,7 @@ export async function POST(
       );
     }
 
-    if (presentation.userId !== session.user.id) {
+    if (presentation.userId !== userId) {
       return NextResponse.json(
         { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
         { status: 403 },
@@ -84,13 +89,50 @@ export async function POST(
       );
     }
 
-    const { title, description, themeId, sections } = parsed.data;
+    const { title, description, themeId, themeTokens, sections } = parsed.data;
+    let resolvedThemeId = themeId;
 
     await prisma.$transaction(async (tx) => {
+      if (themeTokens !== undefined) {
+        const theme = await tx.theme.findUnique({
+          where: { id: themeId },
+          select: { id: true, userId: true, isPreset: true },
+        });
+
+        if (!theme) {
+          throw new Error(`Theme "${themeId}" not found.`);
+        }
+
+        const serializedTokens = JSON.parse(
+          JSON.stringify(themeTokens),
+        ) as Prisma.InputJsonValue;
+
+        // Preset (or non-owned) themes are immutable for this user.
+        // Fork into a user-owned theme and re-point the presentation.
+        if (theme.isPreset || theme.userId !== userId) {
+          const customTheme = await tx.theme.create({
+            data: {
+              name: `${title} (Custom Theme)`,
+              userId,
+              isPreset: false,
+              tokens: serializedTokens,
+            },
+            select: { id: true },
+          });
+          resolvedThemeId = customTheme.id;
+        } else {
+          await tx.theme.update({
+            where: { id: theme.id },
+            data: { tokens: serializedTokens },
+          });
+          resolvedThemeId = theme.id;
+        }
+      }
+
       // Update presentation metadata
       await tx.presentation.update({
         where: { id },
-        data: { title, description, themeId },
+        data: { title, description, themeId: resolvedThemeId },
       });
 
       // Delete all existing sections and recreate them
@@ -120,7 +162,7 @@ export async function POST(
       console.error('[save] Thumbnail regeneration failed:', err);
     });
 
-    return NextResponse.json({ success: true, data: { savedAt } });
+    return NextResponse.json({ success: true, data: { savedAt, themeId: resolvedThemeId } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(

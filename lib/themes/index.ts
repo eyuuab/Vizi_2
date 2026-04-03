@@ -201,6 +201,9 @@ export function resolveThemeTokens(tokens: ThemeTokens): CSSVariableMap {
     vars['--sf-overlay-opacity'] = String(tokens.effects.overlayOpacity);
   }
 
+  // Derived slide background (subtle multi-color blend, never a flat single color)
+  vars['--sf-slide-background'] = buildSlideBackground(tokens);
+
   return vars;
 }
 
@@ -277,4 +280,90 @@ function buildGradientCSS(
 ): string {
   const stopStrings = stops.map((s) => `${s.color} ${String(s.position)}%`).join(', ');
   return `linear-gradient(${String(angle)}deg, ${stopStrings})`;
+}
+
+function buildSlideBackground(tokens: ThemeTokens): string {
+  const bg = parseColor(tokens.colors.background) ?? { r: 255, g: 255, b: 255 };
+  const surface = parseColor(tokens.colors.surface) ?? bg;
+  const primary = parseColor(tokens.colors.primary) ?? surface;
+  const text = parseColor(tokens.colors.textPrimary) ?? { r: 17, g: 24, b: 39 };
+
+  const darkTheme = getPerceivedLuminance(text) > getPerceivedLuminance(bg);
+
+  // Keep blends subtle so readability stays high for content-heavy slides.
+  const stopA = mixColors(bg, surface, darkTheme ? 0.65 : 0.5);
+  const stopB = mixColors(bg, primary, darkTheme ? 0.18 : 0.1);
+  const stopC = mixColors(surface, primary, darkTheme ? 0.24 : 0.14);
+
+  const angle = tokens.effects.gradientAngle ?? 135;
+  return `linear-gradient(${String(angle)}deg, ${toHex(stopA)} 0%, ${toHex(stopB)} 52%, ${toHex(stopC)} 100%)`;
+}
+
+function parseColor(value: string): { r: number; g: number; b: number } | null {
+  const hex = value.trim();
+  if (hex.startsWith('#')) {
+    const raw = hex.slice(1);
+    if (raw.length === 3) {
+      const rChar = raw.charAt(0);
+      const gChar = raw.charAt(1);
+      const bChar = raw.charAt(2);
+      const r = parseInt(rChar + rChar, 16);
+      const g = parseInt(gChar + gChar, 16);
+      const b = parseInt(bChar + bChar, 16);
+      if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
+      return { r, g, b };
+    }
+    if (raw.length === 6) {
+      const r = parseInt(raw.slice(0, 2), 16);
+      const g = parseInt(raw.slice(2, 4), 16);
+      const b = parseInt(raw.slice(4, 6), 16);
+      if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
+      return { r, g, b };
+    }
+    return null;
+  }
+
+  const rgbMatch = hex.match(
+    /^rgb\(\s*(\d{1,3})\s*[,\s]\s*(\d{1,3})\s*[,\s]\s*(\d{1,3})\s*\)$/i,
+  );
+  if (!rgbMatch) return null;
+
+  const rRaw = rgbMatch[1];
+  const gRaw = rgbMatch[2];
+  const bRaw = rgbMatch[3];
+  if (!rRaw || !gRaw || !bRaw) return null;
+
+  const r = clamp8(parseInt(rRaw, 10));
+  const g = clamp8(parseInt(gRaw, 10));
+  const b = clamp8(parseInt(bRaw, 10));
+  return { r, g, b };
+}
+
+function clamp8(value: number): number {
+  if (Number.isNaN(value)) return 0;
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function mixColors(
+  a: { r: number; g: number; b: number },
+  b: { r: number; g: number; b: number },
+  weight: number,
+): { r: number; g: number; b: number } {
+  const w = Math.max(0, Math.min(1, weight));
+  return {
+    r: clamp8(a.r * (1 - w) + b.r * w),
+    g: clamp8(a.g * (1 - w) + b.g * w),
+    b: clamp8(a.b * (1 - w) + b.b * w),
+  };
+}
+
+function toHex(color: { r: number; g: number; b: number }): string {
+  const r = color.r.toString(16).padStart(2, '0');
+  const g = color.g.toString(16).padStart(2, '0');
+  const b = color.b.toString(16).padStart(2, '0');
+  return `#${r}${g}${b}`;
+}
+
+function getPerceivedLuminance(color: { r: number; g: number; b: number }): number {
+  return (0.299 * color.r + 0.587 * color.g + 0.114 * color.b) / 255;
 }

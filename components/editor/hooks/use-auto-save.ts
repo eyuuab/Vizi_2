@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setIsSaving, setLastSavedAt } from '@/store/slices/editor-slice';
-import { markClean } from '@/store/slices/presentation-slice';
+import { markClean, setThemeIdPersisted } from '@/store/slices/presentation-slice';
+import { markThemeSaved } from '@/store/slices/theme-slice';
 import { addToast } from '@/store/slices/ui-slice';
 
 const AUTO_SAVE_INTERVAL_MS = 30_000;
@@ -13,71 +14,95 @@ const AUTO_SAVE_INTERVAL_MS = 30_000;
  * - Saves every 30s if there are unsaved changes.
  * - Exposes a `saveNow` function for manual Ctrl+S saves.
  */
-export function useAutoSave(): { saveNow: () => void } {
+export function useAutoSave(): { saveNow: () => Promise<void> } {
   const dispatch = useAppDispatch();
   const presentation = useAppSelector((state) => state.presentation);
+  const activeThemeTokens = useAppSelector((state) => state.theme.activeTokens);
   const isDirty = useAppSelector((state) => state.presentation.isDirty);
-  const isSaving = useAppSelector((state) => state.editor.isSaving);
+  const isThemeCustomized = useAppSelector((state) => state.theme.isCustomized);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isSavingRef = useRef(false);
+  const inFlightSaveRef = useRef<Promise<void> | null>(null);
 
-  const performSave = useCallback(async () => {
-    if (!presentation.id || isSavingRef.current) return;
-    if (!presentation.isDirty) return;
+  const performSave = useCallback((): Promise<void> => {
+    if (!presentation.id) return Promise.resolve();
+    if (!presentation.isDirty && !isThemeCustomized) return Promise.resolve();
+    if (inFlightSaveRef.current) return inFlightSaveRef.current;
 
-    isSavingRef.current = true;
     dispatch(setIsSaving(true));
 
-    try {
-      const payload = {
-        title: presentation.title,
-        description: presentation.description,
-        themeId: presentation.themeId,
-        sections: presentation.sections.map((s) => ({
-          id: s.id,
-          layoutId: s.layoutId,
-          order: s.order,
-          content: s.content,
-          styleOverrides: s.styleOverrides ?? null,
-          transitions: s.transitions ?? null,
-          notes: s.notes,
-          isHidden: s.isHidden,
-        })),
-      };
+    const savePromise = (async () => {
+      try {
+        const payload = {
+          title: presentation.title,
+          description: presentation.description,
+          themeId: presentation.themeId,
+          themeTokens: isThemeCustomized ? activeThemeTokens : undefined,
+          sections: presentation.sections.map((s) => ({
+            id: s.id,
+            layoutId: s.layoutId,
+            order: s.order,
+            content: s.content,
+            styleOverrides: s.styleOverrides ?? null,
+            transitions: s.transitions ?? null,
+            notes: s.notes,
+            isHidden: s.isHidden,
+          })),
+        };
 
-      const response = await fetch(`/api/presentations/${presentation.id}/save`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+        const response = await fetch(`/api/presentations/${presentation.id}/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          keepalive: true,
+        });
 
-      if (!response.ok) {
-        throw new Error(`Save failed with status ${String(response.status)}`);
+        if (!response.ok) {
+          throw new Error(`Save failed with status ${String(response.status)}`);
+        }
+
+        const result = (await response.json()) as {
+          success: boolean;
+          data?: { savedAt: string; themeId?: string };
+        };
+        if (result.success && result.data) {
+          if (result.data.themeId && result.data.themeId !== presentation.themeId) {
+            dispatch(setThemeIdPersisted(result.data.themeId));
+          }
+          dispatch(setLastSavedAt(result.data.savedAt));
+          dispatch(markThemeSaved());
+          dispatch(markClean());
+        }
+      } catch (error) {
+        dispatch(setIsSaving(false));
+        dispatch(
+          addToast({
+            id: `save-error-${Date.now()}`,
+            type: 'error',
+            message:
+              error instanceof Error
+                ? error.message
+                : 'Failed to save presentation.',
+            duration: 5000,
+          }),
+        );
       }
+    })();
 
-      const result = (await response.json()) as { success: boolean; data?: { savedAt: string } };
-      if (result.success && result.data) {
-        dispatch(setLastSavedAt(result.data.savedAt));
-        dispatch(markClean());
-      }
-    } catch (error) {
-      dispatch(setIsSaving(false));
-      dispatch(
-        addToast({
-          id: `save-error-${Date.now()}`,
-          type: 'error',
-          message: error instanceof Error ? error.message : 'Failed to save presentation.',
-          duration: 5000,
-        }),
-      );
-    } finally {
-      isSavingRef.current = false;
-    }
-  }, [presentation, dispatch]);
+    inFlightSaveRef.current = savePromise.finally(() => {
+      inFlightSaveRef.current = null;
+    });
+
+    return inFlightSaveRef.current;
+  }, [
+    presentation,
+    activeThemeTokens,
+    isThemeCustomized,
+    dispatch,
+  ]);
 
   // Auto-save timer
   useEffect(() => {
-    if (!isDirty || !presentation.id) return;
+    if ((!isDirty && !isThemeCustomized) || !presentation.id) return;
 
     timerRef.current = setTimeout(() => {
       void performSave();
@@ -88,13 +113,13 @@ export function useAutoSave(): { saveNow: () => void } {
         clearTimeout(timerRef.current);
       }
     };
-  }, [isDirty, presentation.id, performSave]);
+  }, [isDirty, isThemeCustomized, presentation.id, performSave]);
 
-  const saveNow = useCallback(() => {
+  const saveNow = useCallback(async () => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
-    void performSave();
+    await performSave();
   }, [performSave]);
 
   return { saveNow };

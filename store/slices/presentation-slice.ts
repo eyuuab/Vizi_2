@@ -87,6 +87,9 @@ export const presentationSlice = createSlice({
       state.themeId = action.payload;
       state.isDirty = true;
     },
+    setThemeIdPersisted(state, action: PayloadAction<string>) {
+      state.themeId = action.payload;
+    },
     setIsPublic(state, action: PayloadAction<boolean>) {
       state.isPublic = action.payload;
       state.isDirty = true;
@@ -432,6 +435,7 @@ export const {
   setTitle,
   setDescription,
   setThemeId,
+  setThemeIdPersisted,
   setIsPublic,
   addSection,
   removeSection,

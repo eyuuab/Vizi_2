@@ -8,6 +8,8 @@ import { updateSectionSlotContent } from '@/store/slices/presentation-slice';
 import { getLayout } from '@/lib/layouts';
 import { SectionRenderer } from '@/components/sections/section-renderer';
 import { TiptapEditor } from './tiptap-editor';
+import { InlineListEditor, parseItems } from './inline-list-editor';
+import { InlineStatsEditor, parseStats } from './inline-stats-editor';
 import type { ResolvedSection, ResolvedSlot } from '@/types/presentation';
 import type { SectionState } from '@/store/slices/presentation-slice';
 import type { LayoutTemplate } from '@/types/layout';
@@ -99,7 +101,7 @@ interface CanvasSectionProps {
   isEditing: boolean;
   onSelect: () => void;
   onSelectSlot: (slotId: string) => void;
-  onUpdateSlot: (slotId: string, content: string) => void;
+  onUpdateSlot: (slotId: string, content: string | Record<string, unknown> | unknown[]) => void;
 }
 
 function CanvasSection({
@@ -130,13 +132,16 @@ function CanvasSection({
   return (
     <div
       className={cn(
-        'relative rounded-lg transition-all cursor-pointer bg-[var(--sf-color-background,#fff)] shadow-md overflow-hidden',
+        'relative rounded-lg transition-all cursor-pointer shadow-md overflow-hidden',
         isSelected
           ? 'ring-2 ring-primary ring-offset-2'
           : 'hover:ring-1 hover:ring-border hover:ring-offset-1',
         section.isHidden && 'opacity-50',
       )}
-      style={{ aspectRatio: '16 / 9' }}
+      style={{
+        aspectRatio: '16 / 9',
+        background: 'var(--sf-slide-background, var(--sf-color-background, #fff))',
+      }}
       onClick={handleSectionClick}
     >
       {/* Always render the real layout */}
@@ -174,8 +179,13 @@ interface EditableSlotOverlayProps {
   layout: LayoutTemplate;
   selectedSlotId: string | null;
   onSelectSlot: (slotId: string) => void;
-  onUpdateSlot: (slotId: string, content: string) => void;
+  onUpdateSlot: (slotId: string, content: string | Record<string, unknown> | unknown[]) => void;
 }
+
+const TEXT_SLOT_TYPES = new Set(['TEXT', 'RICHTEXT', 'HEADING']);
+const EDITABLE_SLOT_TYPES = new Set([
+  'TEXT', 'RICHTEXT', 'HEADING', 'IMAGE', 'LIST', 'STATS',
+]);
 
 function EditableSlotOverlay({
   section,
@@ -184,13 +194,14 @@ function EditableSlotOverlay({
   onSelectSlot,
   onUpdateSlot,
 }: EditableSlotOverlayProps): React.JSX.Element {
-  const textSlotTypes = new Set(['TEXT', 'RICHTEXT', 'HEADING']);
   const interactiveSlots = layout.slots.filter(
-    (s) => textSlotTypes.has(s.type) || s.type === 'IMAGE',
+    (s) => EDITABLE_SLOT_TYPES.has(s.type),
   );
 
   const selectedSlot = interactiveSlots.find((s) => s.id === selectedSlotId);
-  const selectedSlotIsText = Boolean(selectedSlot && textSlotTypes.has(selectedSlot.type));
+  const selectedSlotIsText = Boolean(selectedSlot && TEXT_SLOT_TYPES.has(selectedSlot.type));
+  const selectedSlotIsList = selectedSlot?.type === 'LIST';
+  const selectedSlotIsStats = selectedSlot?.type === 'STATS';
   const selectedContent =
     selectedSlot && typeof section.content[selectedSlot.id] === 'string'
       ? (section.content[selectedSlot.id] as string)
@@ -198,12 +209,12 @@ function EditableSlotOverlay({
 
   return (
     <>
-      {/* Transparent clickable overlay for text/image slots */}
+      {/* Transparent clickable overlay for editable slots */}
       <div className="absolute inset-0 z-10">
         {interactiveSlots.map((slot) => {
           const pos = slot.position;
           const isSelected = selectedSlotId === slot.id;
-          const isTextSlot = textSlotTypes.has(slot.type);
+          const isTextSlot = TEXT_SLOT_TYPES.has(slot.type);
           return (
             <div
               key={slot.id}
@@ -224,29 +235,61 @@ function EditableSlotOverlay({
                 e.stopPropagation();
                 onSelectSlot(slot.id);
               }}
-            />
+            >
+              {/* Show slot type badge on hover for non-text slots */}
+              {!isTextSlot && !isSelected && (
+                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-[9px] rounded bg-primary/10 px-1 py-0.5 text-primary font-medium">
+                    {slot.type}
+                  </span>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
 
-      {/* Inline editor panel for the selected text slot */}
-      {selectedSlot && selectedSlotIsText && (
+      {/* Inline editor panel for the selected slot */}
+      {selectedSlot && (selectedSlotIsText || selectedSlotIsList || selectedSlotIsStats) && (
         <div
           className="relative z-20 mx-4 -mt-2 mb-2 rounded-lg border border-primary/20 bg-card p-4 shadow-lg"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="font-medium">{selectedSlot.label}</span>
-            <span className="rounded bg-muted px-1.5 py-0.5">{selectedSlot.type}</span>
-          </div>
-          <TiptapEditor
-            content={selectedContent}
-            placeholder={selectedSlot.label}
-            maxLength={selectedSlot.constraints?.maxLength}
-            isHeading={selectedSlot.type === 'HEADING'}
-            onUpdate={(html) => onUpdateSlot(selectedSlot.id, html)}
-            onFocus={() => onSelectSlot(selectedSlot.id)}
-          />
+          {/* Text editor */}
+          {selectedSlotIsText && (
+            <>
+              <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="font-medium">{selectedSlot.label}</span>
+                <span className="rounded bg-muted px-1.5 py-0.5">{selectedSlot.type}</span>
+              </div>
+              <TiptapEditor
+                content={selectedContent}
+                placeholder={selectedSlot.label}
+                maxLength={selectedSlot.constraints?.maxLength}
+                isHeading={selectedSlot.type === 'HEADING'}
+                onUpdate={(html) => onUpdateSlot(selectedSlot.id, html)}
+                onFocus={() => onSelectSlot(selectedSlot.id)}
+              />
+            </>
+          )}
+
+          {/* List editor */}
+          {selectedSlotIsList && (
+            <InlineListEditor
+              items={parseItems(section.content[selectedSlot.id])}
+              slotLabel={selectedSlot.label}
+              onUpdate={(items) => onUpdateSlot(selectedSlot.id, items)}
+            />
+          )}
+
+          {/* Stats editor */}
+          {selectedSlotIsStats && (
+            <InlineStatsEditor
+              stats={parseStats(section.content[selectedSlot.id])}
+              slotLabel={selectedSlot.label}
+              onUpdate={(stats) => onUpdateSlot(selectedSlot.id, stats)}
+            />
+          )}
         </div>
       )}
     </>
