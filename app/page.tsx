@@ -226,76 +226,168 @@ export default function LandingPage() {
 
       <main className="flex-1 pt-16">
         {/* Hero Section */}
-        <section className="relative overflow-hidden">
+        <section className="relative overflow-hidden border-b border-border/40">
           <div
-            className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80"
+            className="pointer-events-none absolute inset-0 -z-10"
+            style={{
+              backgroundImage:
+                'radial-gradient(65% 50% at 50% 0%, hsl(var(--primary) / 0.16), transparent 65%)',
+            }}
+            aria-hidden="true"
+          />
+          <div
+            className="pointer-events-none absolute inset-0 -z-10 hero-grid-mask"
             aria-hidden="true"
           >
-            <div
-              className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-primary to-[#9089fc] opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"
-              style={{
-                clipPath:
-                  'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)',
-              }}
-            />
+            <div className="hero-grid h-full w-full opacity-70" />
+          </div>
+          <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            <div className="hero-orb hero-orb-a" />
+            <div className="hero-orb hero-orb-b" />
+            <div className="hero-orb hero-orb-c" />
           </div>
 
-          <div className="container mx-auto px-6 py-24 sm:py-32 lg:px-8 text-center">
-            <div className="mx-auto max-w-4xl space-y-8">
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary shadow-sm backdrop-blur-sm transition-all hover:bg-primary/10 hover:border-primary/30 cursor-default">
-                <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
-                Vizi2 AI Engine v2.0 is Live
-              </div>
-              <h1 className="text-5xl font-extrabold tracking-tight sm:text-7xl lg:text-8xl bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/70">
-                Presentations that{' '}
-                <br className="hidden sm:block" /> write themselves.
-              </h1>
-              <p className="mx-auto max-w-2xl text-lg sm:text-xl text-muted-foreground leading-relaxed">
-                Describe your presentation in plain English. Vizi2 generates
-                fully-designed, layout-based slides with beautiful themes — ready
-                to customize and export as pixel-perfect PowerPoint files.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                <Link href="/register">
-                  <Button
-                    size="lg"
-                    className="h-14 px-8 text-base font-semibold rounded-full shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all"
-                  >
-                    Start Creating for Free{' '}
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium mt-4 sm:mt-0">
-                  <CheckCircle2 className="h-4 w-4 text-primary" /> No credit
-                  card required
+          <div className="container mx-auto px-6 py-20 sm:py-24 lg:px-8 lg:py-28">
+            <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
+              <div className="space-y-8">
+                <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-background/70 px-4 py-1.5 text-sm font-medium text-primary shadow-sm backdrop-blur-sm">
+                  <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  Motion Canvas Engine
                 </div>
-              </div>
-            </div>
-
-            {/* Mockup */}
-            <div className="mt-16 sm:mt-24 relative mx-auto max-w-5xl rounded-2xl border border-border/50 bg-background/50 p-2 shadow-2xl backdrop-blur-sm sm:p-4 ring-1 ring-white/10">
-              <div className="rounded-xl overflow-hidden border bg-muted/20 aspect-video relative flex items-center justify-center group cursor-pointer">
-                <div className="absolute inset-0 bg-gradient-to-br from-muted/50 to-muted/10" />
-                <div className="z-10 bg-background/90 backdrop-blur-md border rounded-xl p-8 max-w-sm text-left shadow-2xl transition-transform group-hover:scale-105">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                      <Sparkles className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm">Vizi2 AI</p>
-                      <p className="text-xs text-muted-foreground">
-                        Drafting slides...
-                      </p>
-                    </div>
+                <div className="space-y-5">
+                  <h1 className="max-w-3xl text-balance text-5xl font-black leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
+                    Build deck-ready stories in minutes, not meetings.
+                  </h1>
+                  <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
+                    Drop in a prompt and Vizi2 drafts a polished narrative with
+                    structure, visuals, and brand-ready layouts. You refine what
+                    matters, then export in one click.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <Link href="/register">
+                    <Button
+                      size="lg"
+                      className="h-14 rounded-full px-8 text-base font-semibold shadow-lg shadow-primary/25 transition-transform hover:-translate-y-0.5"
+                    >
+                      Start Creating for Free
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                  </Link>
+                  <Link href="#pricing">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="h-14 rounded-full px-8 text-base font-semibold bg-background/70 backdrop-blur-sm"
+                    >
+                      See Pricing
+                    </Button>
+                  </Link>
+                </div>
+                <div className="flex flex-wrap items-center gap-5 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 font-medium">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    No credit card required
                   </div>
-                  <div className="space-y-3">
-                    <div className="h-2 w-full bg-muted-foreground/20 rounded-full overflow-hidden">
-                      <div className="h-full w-2/3 bg-primary animate-pulse rounded-full" />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Applying &quot;Modern Minimal&quot; layout...
+                  <div className="h-4 w-px bg-border" />
+                  <div className="font-medium">4.9/5 from 2,000+ creators</div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-border/70 bg-background/75 p-4 backdrop-blur-sm">
+                    <p className="text-2xl font-extrabold tracking-tight">
+                      12x
+                    </p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      Faster first draft
                     </p>
                   </div>
+                  <div className="rounded-2xl border border-border/70 bg-background/75 p-4 backdrop-blur-sm">
+                    <p className="text-2xl font-extrabold tracking-tight">
+                      40+
+                    </p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      Layout patterns
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-border/70 bg-background/75 p-4 backdrop-blur-sm">
+                    <p className="text-2xl font-extrabold tracking-tight">
+                      99%
+                    </p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      Export fidelity
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative mx-auto w-full max-w-xl lg:mx-0">
+                <div className="hero-glow-ring absolute -right-8 -top-8 h-40 w-40 rounded-full border border-primary/30" />
+                <div className="hero-glow-ring hero-glow-ring-delay absolute -bottom-10 left-2 h-28 w-28 rounded-full border border-primary/20" />
+                <div className="hero-card-float rounded-3xl border border-border/70 bg-background/90 p-4 shadow-2xl backdrop-blur-xl sm:p-5">
+                  <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15">
+                          <Sparkles className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold">AI Deck Pilot</p>
+                          <p className="text-xs text-muted-foreground">
+                            Live composition
+                          </p>
+                        </div>
+                      </div>
+                      <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
+                        Generating
+                      </span>
+                    </div>
+                    <div className="space-y-3 rounded-xl border border-border/60 bg-background/80 p-3.5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        Prompt
+                      </p>
+                      <p className="text-sm leading-relaxed">
+                        Build a 10-slide product launch story for an AI note
+                        taking app targeting remote teams.
+                      </p>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/75 px-3 py-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                        <p className="text-sm font-medium">
+                          Story arc and talking points drafted
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/75 px-3 py-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+                        <p className="text-sm font-medium">
+                          Theme and layout system applied
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/75 px-3 py-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-cyan-500" />
+                        <p className="text-sm font-medium">
+                          PPTX export rendering in progress
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute -right-4 top-8 w-44 rounded-2xl border border-border/70 bg-background/90 p-3 shadow-xl backdrop-blur-sm sm:w-48">
+                  <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                    Slide Balance
+                  </p>
+                  <p className="mt-1 text-2xl font-extrabold">A+</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Visual rhythm optimized
+                  </p>
+                </div>
+
+                <div className="absolute -bottom-4 left-6 rounded-2xl border border-border/70 bg-background/95 px-4 py-3 shadow-lg backdrop-blur-sm">
+                  <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                    Export Queue
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">PowerPoint ready</p>
                 </div>
               </div>
             </div>

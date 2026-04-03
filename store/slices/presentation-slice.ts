@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { SectionContent, StyleOverrides, TransitionConfig } from '@/types/presentation';
 import { LAYOUT_REGISTRY } from '@/lib/layouts';
+import type { SlotType } from '@/types/enums';
 
 export interface SectionState {
   id: string;
@@ -34,6 +35,19 @@ const initialState: PresentationState = {
   sections: [],
   isDirty: false,
 };
+
+function getEmptySlotValue(slotType: SlotType): string | Record<string, unknown> | unknown[] {
+  switch (slotType) {
+    case 'LIST':
+    case 'STATS':
+      return [];
+    case 'CHART':
+    case 'CONFIG':
+      return {};
+    default:
+      return '';
+  }
+}
 
 export const presentationSlice = createSlice({
   name: 'presentation',
@@ -137,65 +151,198 @@ export const presentationSlice = createSlice({
           const oldContent = section.content;
           const newContent: SectionContent = {};
 
-          // Build lookup of old content by slot type
           const oldLayout = LAYOUT_REGISTRY[section.layoutId];
-          const oldSlotTypes: Record<string, string> = {};
-          if (oldLayout) {
-            for (const slot of oldLayout.slots) {
-              oldSlotTypes[slot.id] = slot.type;
-            }
-          }
+          const consumedOldSlotIds = new Set<string>();
 
-          // Group old content by type for fallback matching
-          const textValues: string[] = []; // HEADING, TEXT, RICHTEXT
-          const imageValues: string[] = [];
-          const listValues: unknown[] = [];
-
-          for (const [slotId, value] of Object.entries(oldContent)) {
-            const type = oldSlotTypes[slotId];
-            if (type === 'HEADING' || type === 'TEXT' || type === 'RICHTEXT') {
-              if (typeof value === 'string' && value) textValues.push(value);
-            } else if (type === 'IMAGE') {
-              if (typeof value === 'string' && value) imageValues.push(value);
-            } else if (type === 'LIST') {
-              if (value) listValues.push(value);
-            }
-          }
-
-          let textIdx = 0;
-          let imageIdx = 0;
-          let listIdx = 0;
-
+          // 1) Direct match by slot ID always wins.
           for (const slot of newLayout.slots) {
-            // 1. Direct match: same slot id exists in old content
             const directMatch = oldContent[slot.id];
             if (directMatch !== undefined) {
               newContent[slot.id] = directMatch as string | Record<string, unknown> | unknown[];
+              consumedOldSlotIds.add(slot.id);
+            }
+          }
+
+          // 2) Build deterministic fallback pools using old layout slot order.
+          // Keep text sub-types separate to avoid heading/body swaps.
+          const headingValues: string[] = [];
+          const textValues: string[] = [];
+          const richTextValues: string[] = [];
+          const imageValues: string[] = [];
+          const listValues: unknown[][] = [];
+          const statsValues: unknown[][] = [];
+          const chartValues: Record<string, unknown>[] = [];
+          const configValues: Record<string, unknown>[] = [];
+          const urlValues: string[] = [];
+          const videoValues: string[] = [];
+          const mermaidValues: string[] = [];
+
+          const oldSlotsInOrder = oldLayout?.slots ?? [];
+          for (const oldSlot of oldSlotsInOrder) {
+            if (consumedOldSlotIds.has(oldSlot.id)) continue;
+
+            const value = oldContent[oldSlot.id];
+            if (value === undefined || value === null) continue;
+
+            switch (oldSlot.type) {
+              case 'HEADING':
+                if (typeof value === 'string' && value.trim().length > 0) headingValues.push(value);
+                break;
+              case 'TEXT':
+                if (typeof value === 'string' && value.trim().length > 0) textValues.push(value);
+                break;
+              case 'RICHTEXT':
+                if (typeof value === 'string' && value.trim().length > 0) richTextValues.push(value);
+                break;
+              case 'IMAGE':
+                if (typeof value === 'string' && value.trim().length > 0) imageValues.push(value);
+                break;
+              case 'LIST':
+                if (Array.isArray(value) && value.length > 0) listValues.push(value);
+                break;
+              case 'STATS':
+                if (Array.isArray(value) && value.length > 0) statsValues.push(value);
+                break;
+              case 'CHART':
+                if (typeof value === 'object' && !Array.isArray(value)) {
+                  chartValues.push(value as Record<string, unknown>);
+                }
+                break;
+              case 'CONFIG':
+                if (typeof value === 'object' && !Array.isArray(value)) {
+                  configValues.push(value as Record<string, unknown>);
+                }
+                break;
+              case 'URL':
+                if (typeof value === 'string' && value.trim().length > 0) urlValues.push(value);
+                break;
+              case 'VIDEO':
+                if (typeof value === 'string' && value.trim().length > 0) videoValues.push(value);
+                break;
+              case 'MERMAID':
+                if (typeof value === 'string' && value.trim().length > 0) mermaidValues.push(value);
+                break;
+            }
+          }
+
+          // If the old layout metadata is missing, use a safe fallback traversal.
+          if (oldSlotsInOrder.length === 0) {
+            for (const [slotId, value] of Object.entries(oldContent)) {
+              if (consumedOldSlotIds.has(slotId)) continue;
+              if (typeof value === 'string' && value.trim().length > 0) {
+                textValues.push(value);
+              } else if (Array.isArray(value) && value.length > 0) {
+                listValues.push(value);
+              } else if (typeof value === 'object' && value && !Array.isArray(value)) {
+                configValues.push(value as Record<string, unknown>);
+              }
+            }
+          }
+
+          const takeString = (pool: string[]): string | undefined => pool.shift();
+          const takeArray = (pool: unknown[][]): unknown[] | undefined => pool.shift();
+          const takeObject = (
+            pool: Record<string, unknown>[],
+          ): Record<string, unknown> | undefined => pool.shift();
+
+          // 3) Fill remaining new slots by type-compatible fallback.
+          for (const slot of newLayout.slots) {
+            if (newContent[slot.id] !== undefined) {
               continue;
             }
 
-            // 2. Type-based fallback: find unused content of matching type
-            if ((slot.type === 'HEADING' || slot.type === 'TEXT' || slot.type === 'RICHTEXT') && textIdx < textValues.length) {
-              newContent[slot.id] = textValues[textIdx++] as string;
-              continue;
-            }
-            if (slot.type === 'IMAGE' && imageIdx < imageValues.length) {
-              newContent[slot.id] = imageValues[imageIdx++] as string;
-              continue;
-            }
-            if (slot.type === 'LIST' && listIdx < listValues.length) {
-              newContent[slot.id] = listValues[listIdx++] as unknown[];
-              continue;
+            switch (slot.type) {
+              case 'HEADING': {
+                const value =
+                  takeString(headingValues) ??
+                  takeString(textValues) ??
+                  takeString(richTextValues);
+                if (value !== undefined) {
+                  newContent[slot.id] = value;
+                }
+                break;
+              }
+              case 'TEXT': {
+                const value =
+                  takeString(textValues) ??
+                  takeString(richTextValues) ??
+                  takeString(headingValues);
+                if (value !== undefined) {
+                  newContent[slot.id] = value;
+                }
+                break;
+              }
+              case 'RICHTEXT': {
+                const value =
+                  takeString(richTextValues) ??
+                  takeString(textValues) ??
+                  takeString(headingValues);
+                if (value !== undefined) {
+                  newContent[slot.id] = value;
+                }
+                break;
+              }
+              case 'IMAGE': {
+                const value = takeString(imageValues);
+                if (value !== undefined) {
+                  newContent[slot.id] = value;
+                }
+                break;
+              }
+              case 'LIST': {
+                const value = takeArray(listValues);
+                if (value !== undefined) {
+                  newContent[slot.id] = value;
+                }
+                break;
+              }
+              case 'STATS': {
+                const value = takeArray(statsValues);
+                if (value !== undefined) {
+                  newContent[slot.id] = value;
+                }
+                break;
+              }
+              case 'CHART': {
+                const value = takeObject(chartValues);
+                if (value !== undefined) {
+                  newContent[slot.id] = value;
+                }
+                break;
+              }
+              case 'CONFIG': {
+                const value = takeObject(configValues);
+                if (value !== undefined) {
+                  newContent[slot.id] = value;
+                }
+                break;
+              }
+              case 'URL': {
+                const value = takeString(urlValues);
+                if (value !== undefined) {
+                  newContent[slot.id] = value;
+                }
+                break;
+              }
+              case 'VIDEO': {
+                const value = takeString(videoValues);
+                if (value !== undefined) {
+                  newContent[slot.id] = value;
+                }
+                break;
+              }
+              case 'MERMAID': {
+                const value = takeString(mermaidValues);
+                if (value !== undefined) {
+                  newContent[slot.id] = value;
+                }
+                break;
+              }
             }
 
-            // 3. Use layout default content
-            const defaultVal = newLayout.defaultContent[slot.id];
-            if (defaultVal !== undefined) {
-              newContent[slot.id] = defaultVal as string | Record<string, unknown> | unknown[];
-              continue;
-            }
-
-            // 4. Leave empty — slot will show placeholder
+            // 4) Do not inject template sample content on layout switch.
+            // Leave unmatched slots empty so user content stays preserved.
+            newContent[slot.id] = getEmptySlotValue(slot.type);
           }
 
           section.content = newContent;
