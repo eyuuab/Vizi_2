@@ -1,11 +1,5 @@
-import { PrismaClient, type Prisma } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
-import bcryptjs from 'bcryptjs';
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+import { prisma } from '../lib/db/index.js';
+import type { Prisma } from '@prisma/client';
 
 // ============================================================
 // Theme Presets — 12 built-in themes with full ThemeTokens
@@ -477,31 +471,15 @@ async function main(): Promise<void> {
         name: preset.name,
         tokens: preset.tokens,
         isPreset: true,
-        userId: null,
+        clerkUserId: null,
       },
     });
   }
   console.log(`Seeded ${String(THEME_PRESETS.length)} theme presets.`);
 
-  // 2. Create demo user
-  console.log('Creating demo user...');
-  const hashedPassword = await bcryptjs.hash('demo1234', 12);
-  const demoUser = await prisma.user.upsert({
-    where: { email: 'demo@slideforge.ai' },
-    update: {
-      name: 'Demo User',
-      hashedPassword,
-      emailVerified: new Date(),
-    },
-    create: {
-      email: 'demo@slideforge.ai',
-      name: 'Demo User',
-      hashedPassword,
-      emailVerified: new Date(),
-      plan: 'PRO',
-    },
-  });
-  console.log(`Demo user: ${demoUser.email} (password: demo1234)`);
+  // 2. Skip demo user creation (using Clerk for auth)
+  console.log('Skipping demo user creation (using Clerk authentication)...');
+  const demoUser = { id: 'clerk_demo_user_id' }; // Placeholder for template creation
 
   // 3. Seed template presentations for demo user
   console.log('Seeding template presentations...');
@@ -515,34 +493,8 @@ async function main(): Promise<void> {
       continue;
     }
 
-    // Check if presentation already exists (by title + user)
-    const existing = await prisma.presentation.findFirst({
-      where: { title: template.title, userId: demoUser.id },
-    });
-
-    if (existing) {
-      console.log(`  Skipping "${template.title}" (already exists)`);
-      continue;
-    }
-
-    await prisma.presentation.create({
-      data: {
-        title: template.title,
-        description: template.description,
-        userId: demoUser.id,
-        themeId,
-        metadata: { aiPrompt: template.description, generatedAt: new Date().toISOString() } as Prisma.InputJsonValue,
-        sections: {
-          create: template.sections.map((s) => ({
-            layoutId: s.layoutId,
-            order: s.order,
-            content: s.content,
-            notes: s.notes,
-          })),
-        },
-      },
-    });
-    console.log(`  Created "${template.title}" (${String(template.sections.length)} sections)`);
+    // Skip template presentations (they require a real Clerk user)
+    console.log(`  Skipping template "${template.title}" (requires Clerk user)`);
   }
 
   console.log('Seed complete!');
