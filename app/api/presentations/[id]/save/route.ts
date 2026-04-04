@@ -49,23 +49,27 @@ export async function POST(
         { status: 401 },
       );
     }
-    const userId = userId;
 
     const { id } = await params;
+    console.log('[save] Attempting to save presentation:', id, 'for user:', userId);
 
     const presentation = await prisma.presentation.findUnique({
       where: { id },
-      select: { userId: true, themeId: true },
+      select: { clerkUserId: true, themeId: true },
     });
 
     if (!presentation) {
+      console.error('[save] Presentation not found:', id);
       return NextResponse.json(
         { success: false, error: { code: 'NOT_FOUND', message: 'Presentation not found.' } },
         { status: 404 },
       );
     }
 
+    console.log('[save] Found presentation, owner:', presentation.clerkUserId);
+
     if (presentation.clerkUserId !== userId) {
+      console.error('[save] Access denied. Presentation owner:', presentation.clerkUserId, 'Current user:', userId);
       return NextResponse.json(
         { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
         { status: 403 },
