@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { getStarterTemplateById } from '@/lib/templates/starter-templates';
 import { loadAndComposePresentation } from '@/lib/renderer/load-presentation';
@@ -45,8 +45,8 @@ export async function GET(
   >
 > {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
@@ -77,7 +77,7 @@ export async function GET(
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: Record<string, unknown> = { userId: session.user.id };
+    const where: Record<string, unknown> = { clerkUserId: userId };
 
     if (search && search.trim().length > 0) {
       where.title = { contains: search.trim(), mode: 'insensitive' };
@@ -141,8 +141,8 @@ export async function POST(
   request: NextRequest,
 ): Promise<NextResponse<ApiSuccessResponse<unknown> | ApiErrorResponse>> {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
@@ -255,7 +255,7 @@ export async function POST(
       data: {
         title: parsed.data.title,
         description: parsed.data.description ?? null,
-        userId: session.user.id,
+        clerkUserId: userId,
         themeId,
         metadata: selectedTemplate
           ? ({
@@ -293,6 +293,7 @@ export async function POST(
       { status: 201 },
     );
   } catch (error) {
+    console.error('Error creating presentation:', error);
     const message =
       error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(

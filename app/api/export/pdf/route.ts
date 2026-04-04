@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { ExportPdfSchema } from '@/types/api';
 import type { ApiErrorResponse } from '@/types/api';
 import { exportPdf } from '@/lib/renderer/pdf-export';
@@ -20,8 +20,8 @@ export async function POST(
 ): Promise<NextResponse<ArrayBuffer | ApiErrorResponse>> {
   try {
     // Auth check
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         {
           success: false as const,
@@ -55,7 +55,7 @@ export async function POST(
     );
 
     // Verify ownership
-    if (userId !== session.user.id) {
+    if (userId !== userId) {
       return NextResponse.json(
         {
           success: false as const,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import type { ApiErrorResponse, ApiSuccessResponse } from '@/types/api';
 
@@ -15,8 +15,8 @@ export async function POST(
   { params }: RouteParams,
 ): Promise<NextResponse<ApiSuccessResponse<unknown> | ApiErrorResponse>> {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
@@ -31,7 +31,7 @@ export async function POST(
     const section = await prisma.section.findUnique({
       where: { id },
       include: {
-        presentation: { select: { userId: true } },
+        presentation: { select: { clerkUserId: true } },
       },
     });
 
@@ -45,7 +45,7 @@ export async function POST(
       );
     }
 
-    if (section.presentation.userId !== session.user.id) {
+    if (section.presentation.clerkUserId !== userId) {
       return NextResponse.json(
         {
           success: false,

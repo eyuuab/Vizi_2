@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Plus, Sparkles, FileText, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import { DashboardContent } from '@/components/dashboard/dashboard-content';
@@ -21,10 +21,12 @@ interface DashboardPageProps {
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const { userId } = await auth();
+  if (!userId) {
     redirect('/login');
   }
+
+  console.log('Dashboard: User authenticated:', userId);
 
   const params = await searchParams;
 
@@ -50,7 +52,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   // Build where clause
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const where: Record<string, any> = { userId: session.user.id };
+  const where: Record<string, any> = { clerkUserId: userId };
 
   if (search.trim()) {
     where.title = { contains: search.trim(), mode: 'insensitive' };
@@ -66,6 +68,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   let total = 0;
 
   try {
+    // Ensure user metadata exists
+    await prisma.userMetadata.upsert({
+      where: { clerkUserId: userId },
+      create: { clerkUserId: userId },
+      update: {},
+    }).catch(() => {
+      // Ignore if table doesn't exist yet
+    });
+
     const [items, count] = await Promise.all([
       prisma.presentation.findMany({
         where,
@@ -97,8 +108,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       sectionCount: item._count.sections,
     }));
     total = count;
-  } catch {
-    // Database might not be available yet
+  } catch (error) {
+    // Database might not be available yet or schema not migrated
+    console.error('Database error:', error);
   }
 
   const totalPages = Math.ceil(total / limit);

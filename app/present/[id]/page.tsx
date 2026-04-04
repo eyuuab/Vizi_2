@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { redirect, notFound } from 'next/navigation';
 import { composePresentation } from '@/lib/composer';
@@ -37,8 +37,8 @@ export async function generateMetadata({
 export default async function PresentPage({
   params,
 }: PresentPageProps): Promise<React.JSX.Element> {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const { userId } = await auth();
+  if (!userId) {
     redirect('/login');
   }
 
@@ -56,7 +56,7 @@ export default async function PresentPage({
     notFound();
   }
 
-  if (presentation.userId !== session.user.id) {
+  if (presentation.userId !== userId) {
     redirect('/dashboard');
   }
 

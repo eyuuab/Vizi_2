@@ -1,6 +1,6 @@
 /**
  * Rate limiting for AI operations.
- * Tracks usage via the User model's aiCreditsUsed field.
+ * Tracks usage via the UserMetadata model's aiCreditsUsed field.
  */
 
 import { prisma } from '@/lib/db';
@@ -21,19 +21,13 @@ export async function checkRateLimit(
   userId: string,
   operation: string,
 ): Promise<RateLimitResult> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
+  // Ensure user metadata exists
+  const user = await prisma.userMetadata.upsert({
+    where: { clerkUserId: userId },
+    create: { clerkUserId: userId, aiCreditsUsed: 0, plan: 'FREE' },
+    update: {},
     select: { aiCreditsUsed: true, plan: true },
   });
-
-  if (!user) {
-    return {
-      allowed: false,
-      creditsUsed: 0,
-      creditsLimit: 0,
-      creditsRemaining: 0,
-    };
-  }
 
   const limit = AI_CREDITS_LIMIT[user.plan] ?? AI_CREDITS_LIMIT['FREE'] ?? 50;
   const cost = AI_CREDITS_COST[operation] ?? 1;
@@ -58,8 +52,8 @@ export async function consumeCredits(
 ): Promise<void> {
   const cost = AI_CREDITS_COST[operation] ?? 1;
 
-  await prisma.user.update({
-    where: { id: userId },
+  await prisma.userMetadata.update({
+    where: { clerkUserId: userId },
     data: {
       aiCreditsUsed: { increment: cost },
     },

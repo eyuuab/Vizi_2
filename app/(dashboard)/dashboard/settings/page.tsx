@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { auth } from '@/lib/auth';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import { SettingsForm } from '@/components/dashboard/settings-form';
@@ -10,23 +10,28 @@ export const metadata: Metadata = {
 };
 
 export default async function SettingsPage() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const { userId } = await auth();
+  if (!userId) {
     redirect('/login');
   }
 
+  const user = await currentUser();
+  const userName = user?.firstName || user?.username || null;
+  const userEmail = user?.emailAddresses[0]?.emailAddress || '';
+  const userImage = user?.imageUrl || null;
+
   let userProfile = {
-    id: session.user.id,
-    name: session.user.name ?? null,
-    email: session.user.email ?? '',
-    image: session.user.image ?? null,
+    id: userId,
+    name: userName,
+    email: userEmail,
+    image: userImage,
     plan: 'FREE' as string,
     aiCreditsUsed: 0,
   };
 
   try {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
+    const dbUser = await prisma.userMetadata.findUnique({
+      where: { clerkUserId: userId },
       select: {
         id: true,
         name: true,

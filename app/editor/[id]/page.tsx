@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { redirect, notFound } from 'next/navigation';
 import { EditorLayout } from '@/components/editor/editor-layout';
@@ -24,8 +24,8 @@ export async function generateMetadata({ params }: EditorPageProps): Promise<Met
 }
 
 export default async function EditorPage({ params }: EditorPageProps): Promise<React.JSX.Element> {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const { userId } = await auth();
+  if (!userId) {
     redirect('/login');
   }
 
@@ -45,7 +45,7 @@ export default async function EditorPage({ params }: EditorPageProps): Promise<R
     notFound();
   }
 
-  if (presentation.userId !== session.user.id) {
+  if (presentation.clerkUserId !== userId) {
     redirect('/dashboard');
   }
 

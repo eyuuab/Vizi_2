@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { CreateSectionSchema, ReorderSectionsSchema } from '@/types/api';
 import type { ApiErrorResponse, ApiSuccessResponse } from '@/types/api';
@@ -13,8 +13,8 @@ export async function POST(
   { params }: RouteParams,
 ): Promise<NextResponse<ApiSuccessResponse<unknown> | ApiErrorResponse>> {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } },
         { status: 401 },
@@ -25,7 +25,7 @@ export async function POST(
 
     const presentation = await prisma.presentation.findUnique({
       where: { id },
-      select: { userId: true },
+      select: { clerkUserId: true },
     });
 
     if (!presentation) {
@@ -35,7 +35,7 @@ export async function POST(
       );
     }
 
-    if (presentation.userId !== session.user.id) {
+    if (presentation.clerkUserId !== userId) {
       return NextResponse.json(
         { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
         { status: 403 },
@@ -83,8 +83,8 @@ export async function PUT(
   { params }: RouteParams,
 ): Promise<NextResponse<ApiSuccessResponse<unknown> | ApiErrorResponse>> {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } },
         { status: 401 },
@@ -95,7 +95,7 @@ export async function PUT(
 
     const presentation = await prisma.presentation.findUnique({
       where: { id },
-      select: { userId: true },
+      select: { clerkUserId: true },
     });
 
     if (!presentation) {
@@ -105,7 +105,7 @@ export async function PUT(
       );
     }
 
-    if (presentation.userId !== session.user.id) {
+    if (presentation.clerkUserId !== userId) {
       return NextResponse.json(
         { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
         { status: 403 },

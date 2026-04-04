@@ -90,6 +90,6 @@ export async function loadAndComposePresentation(
 
   return {
     composed,
-    userId: presentation.userId,
+    userId: presentation.clerkUserId,
   };
 }

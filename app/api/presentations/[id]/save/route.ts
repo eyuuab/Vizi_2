@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { loadAndComposePresentation } from '@/lib/renderer/load-presentation';
 import { generateThumbnailDataUrl } from '@/lib/renderer/thumbnail';
@@ -42,14 +42,14 @@ export async function POST(
   NextResponse<ApiSuccessResponse<{ savedAt: string; themeId: string }> | ApiErrorResponse>
 > {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } },
         { status: 401 },
       );
     }
-    const userId = session.user.id;
+    const userId = userId;
 
     const { id } = await params;
 
@@ -65,7 +65,7 @@ export async function POST(
       );
     }
 
-    if (presentation.userId !== userId) {
+    if (presentation.clerkUserId !== userId) {
       return NextResponse.json(
         { success: false, error: { code: 'FORBIDDEN', message: 'Access denied.' } },
         { status: 403 },
@@ -96,7 +96,7 @@ export async function POST(
       if (themeTokens !== undefined) {
         const theme = await tx.theme.findUnique({
           where: { id: themeId },
-          select: { id: true, userId: true, isPreset: true },
+          select: { id: true, clerkUserId: true, isPreset: true },
         });
 
         if (!theme) {
@@ -109,7 +109,7 @@ export async function POST(
 
         // Preset (or non-owned) themes are immutable for this user.
         // Fork into a user-owned theme and re-point the presentation.
-        if (theme.isPreset || theme.userId !== userId) {
+        if (theme.isPreset || theme.clerkUserId !== userId) {
           const customTheme = await tx.theme.create({
             data: {
               name: `${title} (Custom Theme)`,

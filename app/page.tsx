@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
 import {
   ArrowRight,
   Sparkles,
@@ -173,7 +175,13 @@ const PRICING: PricingTier[] = [
   },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Redirect authenticated users to dashboard
+  const { userId } = await auth();
+  if (userId) {
+    redirect('/dashboard');
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       {/* Navigation */}

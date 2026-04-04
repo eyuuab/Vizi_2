@@ -61,7 +61,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // Verify the presentation belongs to the user
   const presentation = await prisma.presentation.findFirst({
-    where: { id: presentationId, userId: authResult.userId },
+    where: { id: presentationId, clerkUserId: authResult.userId },
     include: {
       sections: {
         where: { id: sectionId },

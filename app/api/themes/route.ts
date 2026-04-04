@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { ThemeTokensSchema } from '@/types/theme';
 import type { ApiErrorResponse, ApiSuccessResponse } from '@/types/api';
@@ -12,11 +12,11 @@ export async function GET(
   _request: NextRequest,
 ): Promise<NextResponse<ApiSuccessResponse<unknown[]> | ApiErrorResponse>> {
   try {
-    const session = await auth();
+    const { userId } = await auth();
 
     // Presets are always available; user themes require auth
-    const where = session?.user?.id
-      ? { OR: [{ isPreset: true }, { userId: session.user.id }] }
+    const where = userId
+      ? { OR: [{ isPreset: true }, { clerkUserId: userId }] }
       : { isPreset: true };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,8 +57,8 @@ export async function POST(
   request: NextRequest,
 ): Promise<NextResponse<ApiSuccessResponse<unknown> | ApiErrorResponse>> {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
@@ -88,7 +88,7 @@ export async function POST(
     const theme = await prisma.theme.create({
       data: {
         name: parsed.data.name,
-        userId: session.user.id,
+        clerkUserId: userId,
         isPreset: false,
         tokens: JSON.parse(JSON.stringify(parsed.data.tokens)),
         preview: parsed.data.preview ?? null,

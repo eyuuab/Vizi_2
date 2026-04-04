@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { UpdateSectionSchema } from '@/types/api';
 import type { ApiErrorResponse, ApiSuccessResponse } from '@/types/api';
@@ -23,7 +23,7 @@ async function verifyOwnership(
     select: {
       id: true,
       presentationId: true,
-      presentation: { select: { userId: true } },
+      presentation: { select: { clerkUserId: true } },
     },
   });
 
@@ -40,7 +40,7 @@ async function verifyOwnership(
     };
   }
 
-  if (section.presentation.userId !== userId) {
+  if (section.presentation.clerkUserId !== userId) {
     return {
       ok: false,
       response: NextResponse.json(
@@ -64,8 +64,8 @@ export async function PATCH(
   { params }: RouteParams,
 ): Promise<NextResponse<ApiSuccessResponse<unknown> | ApiErrorResponse>> {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
@@ -76,7 +76,7 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const ownership = await verifyOwnership(id, session.user.id);
+    const ownership = await verifyOwnership(id, userId);
     if (!ownership.ok) return ownership.response;
 
     const body: unknown = await request.json();
@@ -132,8 +132,8 @@ export async function DELETE(
   NextResponse<ApiSuccessResponse<{ deleted: boolean }> | ApiErrorResponse>
 > {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
@@ -144,7 +144,7 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const ownership = await verifyOwnership(id, session.user.id);
+    const ownership = await verifyOwnership(id, userId);
     if (!ownership.ok) return ownership.response;
 
     await prisma.section.delete({ where: { id } });

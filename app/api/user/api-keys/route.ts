@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import type { ApiErrorResponse, ApiSuccessResponse } from '@/types/api';
 
 const UpdateApiKeysSchema = z.object({
@@ -20,8 +20,8 @@ export async function PUT(
   request: NextRequest,
 ): Promise<NextResponse<ApiSuccessResponse<{ saved: boolean }> | ApiErrorResponse>> {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,

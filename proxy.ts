@@ -1,31 +1,43 @@
-import { auth } from '@/lib/auth';
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
-const PROTECTED_ROUTES = ['/dashboard', '/editor', '/present'];
-const AUTH_ROUTES = ['/login', '/register'];
+const isProtectedRoute = createRouteMatcher([
+  '/dashboard(.*)',
+  '/editor(.*)',
+  '/api/presentations(.*)',
+  '/api/sections(.*)',
+  '/api/export(.*)',
+  '/api/ai(.*)',
+  '/api/user(.*)',
+]);
 
-export default auth((req) => {
-  const { nextUrl } = req;
-  const isLoggedIn = !!req.auth;
-  const pathname = nextUrl.pathname;
+const isPublicRoute = createRouteMatcher([
+  '/',
+  '/about',
+  '/pricing',
+  '/privacy',
+  '/terms',
+  '/login(.*)',
+  '/register(.*)',
+  '/share/(.*)',
+  '/present/(.*)',
+  '/api/themes',
+]);
 
-  const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
-  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
-
-  // Redirect logged-in users away from auth pages
-  if (isAuthRoute && isLoggedIn) {
-    return NextResponse.redirect(new URL('/dashboard', nextUrl));
-  }
-
-  // Redirect unauthenticated users to login
-  if (isProtectedRoute && !isLoggedIn) {
-    const callbackUrl = encodeURIComponent(pathname + nextUrl.search);
-    return NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, nextUrl));
+export default clerkMiddleware(async (auth, req) => {
+  // Protect routes that require authentication
+  if (isProtectedRoute(req) && !isPublicRoute(req)) {
+    await auth.protect();
   }
 
   return NextResponse.next();
 });
 
 export const config = {
-  matcher: ['/((?!api/auth|_next/static|_next/image|favicon.ico|public).*)'],
+  matcher: [
+    // Skip Next.js internals and static files
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
+  ],
 };

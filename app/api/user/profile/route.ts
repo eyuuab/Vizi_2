@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import type { ApiErrorResponse, ApiSuccessResponse } from '@/types/api';
 
@@ -15,8 +15,8 @@ export async function PATCH(
   request: NextRequest,
 ): Promise<NextResponse<ApiSuccessResponse<unknown> | ApiErrorResponse>> {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
@@ -44,7 +44,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: userId },
       data: { name: parsed.data.name },
       select: { id: true, name: true, email: true, image: true },
     });

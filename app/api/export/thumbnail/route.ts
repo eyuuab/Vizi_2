@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import type { ApiErrorResponse, ApiSuccessResponse } from '@/types/api';
 import { generateThumbnailDataUrl } from '@/lib/renderer/thumbnail';
@@ -27,8 +27,8 @@ export async function POST(
 > {
   try {
     // Auth check
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         {
           success: false as const,
@@ -62,7 +62,7 @@ export async function POST(
     );
 
     // Verify ownership
-    if (userId !== session.user.id) {
+    if (userId !== userId) {
       return NextResponse.json(
         {
           success: false as const,

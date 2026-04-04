@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import { ReorderSectionsSchema } from '@/types/api';
 import type { ApiErrorResponse, ApiSuccessResponse } from '@/types/api';
@@ -18,8 +18,8 @@ export async function PATCH(
   NextResponse<ApiSuccessResponse<{ reordered: boolean }> | ApiErrorResponse>
 > {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
@@ -33,7 +33,7 @@ export async function PATCH(
 
     const presentation = await prisma.presentation.findUnique({
       where: { id },
-      select: { userId: true },
+      select: { clerkUserId: true },
     });
 
     if (!presentation) {
@@ -46,7 +46,7 @@ export async function PATCH(
       );
     }
 
-    if (presentation.userId !== session.user.id) {
+    if (presentation.clerkUserId !== userId) {
       return NextResponse.json(
         {
           success: false,

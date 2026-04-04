@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Sparkles, LayoutGrid, BookTemplate, Settings, LogOut } from 'lucide-react';
-import { auth } from '@/lib/auth';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,12 +13,17 @@ const NAV_ITEMS = [
 ] as const;
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
-  if (!session?.user) {
+  const { userId } = await auth();
+  if (!userId) {
     redirect('/login');
   }
 
-  const initials = (session.user.name ?? session.user.email ?? 'U')
+  const user = await currentUser();
+  const userName = user?.firstName || user?.username || 'User';
+  const userEmail = user?.emailAddresses[0]?.emailAddress || '';
+  const userImage = user?.imageUrl;
+
+  const initials = userName
     .split(' ')
     .map((n) => n[0])
     .join('')
@@ -49,18 +54,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <Separator />
         <div className="flex items-center gap-3 p-4">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={session.user.image ?? undefined} alt={session.user.name ?? 'User'} />
+            <AvatarImage src={userImage} alt={userName} />
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1 truncate">
-            <p className="text-sm font-medium truncate">{session.user.name ?? 'User'}</p>
-            <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
+            <p className="text-sm font-medium truncate">{userName}</p>
+            <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
           </div>
           <form
             action={async () => {
               'use server';
-              const { signOut } = await import('@/lib/auth');
-              await signOut({ redirectTo: '/' });
+              const { signOut } = await import('@clerk/nextjs/server');
+              await signOut({ redirectUrl: '/' });
             }}
           >
             <Button variant="ghost" size="icon" className="h-8 w-8" type="submit">

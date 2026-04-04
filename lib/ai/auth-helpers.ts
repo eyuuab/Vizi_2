@@ -3,7 +3,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { checkRateLimit, consumeCredits } from '@/lib/ai/rate-limiter';
 import type { RateLimitResult } from '@/lib/ai/rate-limiter';
 
@@ -19,8 +19,8 @@ export async function authenticateRequest(): Promise<
   { ok: true; userId: string } | { ok: false; response: NextResponse }
 > {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return {
         ok: false,
         response: NextResponse.json(
@@ -29,7 +29,7 @@ export async function authenticateRequest(): Promise<
         ),
       };
     }
-    return { ok: true, userId: session.user.id };
+    return { ok: true, userId };
   } catch {
     return {
       ok: false,

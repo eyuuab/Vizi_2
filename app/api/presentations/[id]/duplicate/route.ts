@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import type { ApiErrorResponse, ApiSuccessResponse } from '@/types/api';
 
@@ -15,8 +15,8 @@ export async function POST(
   { params }: RouteParams,
 ): Promise<NextResponse<ApiSuccessResponse<unknown> | ApiErrorResponse>> {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
@@ -47,7 +47,7 @@ export async function POST(
       );
     }
 
-    if (original.userId !== session.user.id) {
+    if (original.clerkUserId !== userId) {
       return NextResponse.json(
         {
           success: false,
@@ -62,7 +62,7 @@ export async function POST(
       data: {
         title: `${original.title} (Copy)`,
         description: original.description,
-        userId: session.user.id,
+        clerkUserId: userId,
         themeId: original.themeId,
         isPublic: false,
         shareSlug: null,

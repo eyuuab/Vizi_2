@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/db';
 import type { ApiErrorResponse, ApiSuccessResponse } from '@/types/api';
 
@@ -12,8 +12,8 @@ export async function DELETE(
   NextResponse<ApiSuccessResponse<{ deleted: boolean }> | ApiErrorResponse>
 > {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         {
           success: false,
@@ -25,7 +25,7 @@ export async function DELETE(
 
     // Cascade delete handles presentations, sections, assets, accounts, sessions
     await prisma.user.delete({
-      where: { id: session.user.id },
+      where: { id: userId },
     });
 
     return NextResponse.json({ success: true, data: { deleted: true } });
