@@ -117,7 +117,7 @@ export async function POST(
           const customTheme = await tx.theme.create({
             data: {
               name: `${title} (Custom Theme)`,
-              userId,
+              clerkUserId: userId,
               isPreset: false,
               tokens: serializedTokens,
             },

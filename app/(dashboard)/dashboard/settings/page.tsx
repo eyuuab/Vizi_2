@@ -33,20 +33,13 @@ export default async function SettingsPage() {
     const dbUser = await prisma.userMetadata.findUnique({
       where: { clerkUserId: userId },
       select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
         plan: true,
         aiCreditsUsed: true,
       },
     });
     if (dbUser) {
       userProfile = {
-        id: dbUser.id,
-        name: dbUser.name,
-        email: dbUser.email,
-        image: dbUser.image,
+        ...userProfile,
         plan: dbUser.plan,
         aiCreditsUsed: dbUser.aiCreditsUsed,
       };

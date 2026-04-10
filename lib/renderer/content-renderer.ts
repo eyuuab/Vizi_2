@@ -23,7 +23,8 @@ import { processImage } from './asset-processor';
 interface ChartDataset {
   label?: string;
   name?: string;
-  data: number[];
+  data?: number[];
+  values?: number[];
 }
 
 interface ChartContent {
@@ -256,7 +257,7 @@ function renderChart(
   const chartData: PptxGenJS.OptsChartData[] = datasets.map((ds) => ({
     name: ds.label ?? ds.name ?? 'Series',
     labels,
-    values: ds.data,
+    values: ds.data ?? ds.values ?? [],
   }));
 
   const chartColors = [
@@ -482,22 +483,40 @@ function renderListShape(
   shape: MappedShape,
   theme: PptxResolvedTheme,
 ): void {
-  const items = shape.content as string[] | null;
+  const items = shape.content as unknown[] | null;
   if (!Array.isArray(items)) {
     renderTextbox(slide, shape, theme);
     return;
   }
 
-  const textRuns: PptxGenJS.TextProps[] = items.map((item, index) => ({
-    text: typeof item === 'string' ? item : String(item),
-    options: {
-      bullet: { type: 'bullet' as const },
-      fontFace: theme.fonts.body,
-      fontSize: theme.fontSizes.base,
-      color: theme.colors.textPrimary,
-      breakLine: index < items.length - 1,
-    },
-  }));
+  const textRuns: PptxGenJS.TextProps[] = [];
+  for (let index = 0; index < items.length; index++) {
+    const item = items[index];
+    let label: string;
+    let description: string | undefined;
+
+    if (typeof item === 'string') {
+      label = item;
+    } else if (typeof item === 'object' && item !== null && 'label' in item) {
+      const obj = item as Record<string, unknown>;
+      label = String(obj.label);
+      description = obj.description ? String(obj.description) : undefined;
+    } else {
+      label = String(item);
+    }
+
+    const bulletText = description ? `${label} - ${description}` : label;
+    textRuns.push({
+      text: bulletText,
+      options: {
+        bullet: { type: 'bullet' as const },
+        fontFace: theme.fonts.body,
+        fontSize: theme.fontSizes.base,
+        color: theme.colors.textPrimary,
+        breakLine: index < items.length - 1,
+      },
+    });
+  }
 
   slide.addText(textRuns, {
     x: shape.position.x,

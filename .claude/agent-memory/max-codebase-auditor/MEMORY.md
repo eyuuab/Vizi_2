@@ -1,0 +1,1 @@
+- [Architecture Overview](project_architecture.md) -- Core stack, key file locations, and known broken patterns discovered in 2026-04-10 audit

@@ -74,10 +74,31 @@ export async function POST(request: NextRequest): Promise<Response> {
     request.signal,
   );
 
-  // Consume credits in the background (don't block the stream)
-  void recordCreditUsage(authResult.userId, 'generate');
+  // Wrap the stream to consume credits only after successful completion
+  const userId = authResult.userId;
+  const creditStream = stream.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        controller.enqueue(chunk);
 
-  return new Response(stream, {
+        // Check if this chunk contains a 'complete' event
+        const text = new TextDecoder().decode(chunk);
+        for (const line of text.split('\n')) {
+          if (!line.trim()) continue;
+          try {
+            const event = JSON.parse(line) as { type: string };
+            if (event.type === 'complete') {
+              void recordCreditUsage(userId, 'generate');
+            }
+          } catch {
+            // Not valid JSON, skip
+          }
+        }
+      },
+    }),
+  );
+
+  return new Response(creditStream, {
     headers: {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',

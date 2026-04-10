@@ -12,31 +12,22 @@
  */
 
 import type { ComposedPresentation } from '@/types/presentation';
-import { renderPptx } from './index';
 
 // ============================================================
 // Public API
 // ============================================================
 
 /**
- * Generate a PDF-compatible export of the presentation.
+ * Generate a PDF export of the presentation.
  *
- * Current implementation: generates the PPTX buffer.
- * The API route can convert to PDF via an external service
- * or serve the PPTX with proper content type.
- *
- * In production, integrate with:
- * - LibreOffice headless: `libreoffice --headless --convert-to pdf`
- * - CloudConvert API
- * - Gotenberg (Docker-based converter)
+ * STUB: PDF export is not yet implemented. A PPTX-to-PDF conversion service
+ * (e.g., LibreOffice headless, CloudConvert, or Gotenberg) is required.
+ * This function throws an error to prevent silently returning the wrong format.
  */
 export async function exportPdf(
-  presentation: ComposedPresentation,
+  _presentation: ComposedPresentation,
 ): Promise<Buffer> {
-  // Generate the PPTX first
-  const pptxBuffer = await renderPptx(presentation);
-
-  // In production, convert PPTX to PDF here using an external service.
-  // For now, return the PPTX buffer — the API can handle format negotiation.
-  return pptxBuffer;
+  throw new Error(
+    'PDF export is not yet implemented. Please use PPTX export instead, or integrate a conversion service (LibreOffice headless, CloudConvert, or Gotenberg).',
+  );
 }

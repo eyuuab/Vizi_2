@@ -43,13 +43,18 @@ export async function PATCH(
       );
     }
 
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: { name: parsed.data.name },
-      select: { id: true, name: true, email: true, image: true },
-    });
-
-    return NextResponse.json({ success: true, data: updated });
+    // Profile data (name, email, image) is managed by Clerk, not stored in UserMetadata.
+    // Use the Clerk SDK to update profile fields.
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'NOT_IMPLEMENTED',
+          message: 'Profile updates are managed through Clerk. Use the Clerk user profile to change your name.',
+        },
+      },
+      { status: 501 },
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Internal server error';

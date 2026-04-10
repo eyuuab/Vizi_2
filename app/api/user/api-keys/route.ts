@@ -48,12 +48,18 @@ export async function PUT(
       );
     }
 
-    // In a production system, we would encrypt these keys and store them.
-    // For now, acknowledge the save request.
-    // The AI pipeline would check for user-specific keys before falling back
-    // to system keys.
-
-    return NextResponse.json({ success: true, data: { saved: true } });
+    // User-specific API key storage is not yet implemented.
+    // The schema has no field for storing per-user API keys.
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'NOT_IMPLEMENTED',
+          message: 'User-specific API key storage is not yet available. The system uses server-configured API keys.',
+        },
+      },
+      { status: 501 },
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Internal server error';

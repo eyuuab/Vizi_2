@@ -189,7 +189,7 @@ export function ShareDialog({
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Visitors will need this password to view the presentation.
+                  Password protection is not yet enforced on the viewer. Password will be saved but visitors can currently view without it.
                 </p>
               </div>
 

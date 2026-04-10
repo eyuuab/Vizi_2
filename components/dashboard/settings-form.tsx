@@ -160,7 +160,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
 
   const planLabel =
     user.plan === 'TEAM' ? 'Team' : user.plan === 'PRO' ? 'Pro' : 'Free';
-  const creditLimit = user.plan === 'TEAM' ? 1000 : user.plan === 'PRO' ? 200 : 20;
+  const creditLimit = user.plan === 'TEAM' ? 2000 : user.plan === 'PRO' ? 500 : 50;
 
   return (
     <div className="space-y-10">

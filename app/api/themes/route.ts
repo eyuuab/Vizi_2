@@ -29,7 +29,7 @@ export async function GET(
         isPreset: true,
         tokens: true,
         preview: true,
-        userId: true,
+        clerkUserId: true,
       },
     });
 

@@ -23,9 +23,9 @@ export async function DELETE(
       );
     }
 
-    // Cascade delete handles presentations, sections, assets, accounts, sessions
-    await prisma.user.delete({
-      where: { id: userId },
+    // Cascade delete handles presentations, sections, assets
+    await prisma.userMetadata.delete({
+      where: { clerkUserId: userId },
     });
 
     return NextResponse.json({ success: true, data: { deleted: true } });

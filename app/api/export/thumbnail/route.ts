@@ -57,12 +57,12 @@ export async function POST(
     }
 
     // Load and compose the presentation
-    const { composed, userId } = await loadAndComposePresentation(
+    const { composed, userId: ownerId } = await loadAndComposePresentation(
       parsed.data.presentationId,
     );
 
     // Verify ownership
-    if (userId !== userId) {
+    if (ownerId !== userId) {
       return NextResponse.json(
         {
           success: false as const,

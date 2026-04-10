@@ -74,10 +74,19 @@ export async function checkAndEnforceRateLimit(
     }
     return { ok: true, rateLimit };
   } catch {
-    // If rate limit check fails, allow the request (fail open)
+    // If rate limit check fails, deny the request (fail closed)
     return {
-      ok: true,
-      rateLimit: { allowed: true, creditsUsed: 0, creditsLimit: 999, creditsRemaining: 999 },
+      ok: false,
+      response: NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'RATE_LIMIT_ERROR',
+            message: 'Unable to verify AI credit balance. Please try again.',
+          },
+        },
+        { status: 503 },
+      ),
     };
   }
 }

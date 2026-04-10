@@ -47,8 +47,18 @@ export async function PUT(
       );
     }
 
-    // Acknowledge — in production, persist to user metadata or preferences table
-    return NextResponse.json({ success: true, data: { saved: true } });
+    // Preference storage is not yet implemented.
+    // The schema has no field for storing user preferences.
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'NOT_IMPLEMENTED',
+          message: 'User preference storage is not yet available. Preferences are not persisted between sessions.',
+        },
+      },
+      { status: 501 },
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Internal server error';

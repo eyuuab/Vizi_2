@@ -56,7 +56,7 @@ export default async function PresentPage({
     notFound();
   }
 
-  if (presentation.userId !== userId) {
+  if (presentation.clerkUserId !== userId) {
     redirect('/dashboard');
   }
 

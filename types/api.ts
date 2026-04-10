@@ -61,6 +61,7 @@ export const UpdatePresentationSchema = z.object({
   themeId: z.string().optional(),
   isPublic: z.boolean().optional(),
   shareSlug: z.string().max(100).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type UpdatePresentationInput = z.infer<typeof UpdatePresentationSchema>;
