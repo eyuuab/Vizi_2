@@ -178,20 +178,20 @@ export async function searchImage(
 }
 
 /**
- * Generate a placeholder image URL using a placeholder service.
- * Used when Unsplash API is not available.
+ * Generate a placeholder image URL using a free AI provider.
+ * Used when Unsplash API is not available or FAILS.
  */
 function generatePlaceholderImage(
   query: string,
   aspectRatio?: string,
 ): ImageResult {
   const { width, height } = parseDimensions(aspectRatio);
-  const encodedText = encodeURIComponent(query.slice(0, 30));
+  const encodedQuery = encodeURIComponent(query);
 
   return {
-    url: `https://placehold.co/${String(width)}x${String(height)}/1a1a2e/eaeaea?text=${encodedText}`,
+    url: `https://image.pollinations.ai/prompt/${encodedQuery}?width=${String(width)}&height=${String(height)}&nologo=true`,
     alt: query,
-    attribution: 'Placeholder image',
+    attribution: 'AI Generated Image',
     width,
     height,
   };

@@ -42,6 +42,15 @@ export function TopBar({ onSave }: TopBarProps): React.JSX.Element {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(title);
 
+  const handlePresent = useCallback(() => {
+    dispatch(setMode('present'));
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {
+        // Fall back to in-page presentation mode if browser blocks fullscreen.
+      });
+    }
+  }, [dispatch]);
+
   const handleBackToDashboard = useCallback(async () => {
     if (isDirty || isSaving || isThemeCustomized) {
       await onSave();
@@ -221,7 +230,7 @@ export function TopBar({ onSave }: TopBarProps): React.JSX.Element {
               variant="default"
               size="sm"
               className="h-8 gap-1.5"
-              onClick={() => dispatch(setMode('present'))}
+              onClick={handlePresent}
             >
               <Play className="h-4 w-4" />
               <span className="hidden sm:inline">Present</span>

@@ -21,6 +21,7 @@ import {
   CtaSimpleLayout,
   BlankLayout,
 } from './layouts';
+import { SectionRenderProvider } from './section-render-context';
 
 interface SectionRendererProps {
   section: ResolvedSection;
@@ -31,49 +32,76 @@ interface SectionRendererProps {
  * This is the primary entry point for rendering a presentation section.
  */
 export function SectionRenderer({ section }: SectionRendererProps): React.JSX.Element {
+  let renderedLayout: React.JSX.Element;
+
   switch (section.layoutId) {
     case 'hero-split':
-      return <HeroSplitLayout section={section} />;
+      renderedLayout = <HeroSplitLayout section={section} />;
+      break;
     case 'hero-center':
-      return <HeroCenterLayout section={section} />;
+      renderedLayout = <HeroCenterLayout section={section} />;
+      break;
     case 'hero-gradient':
-      return <HeroGradientLayout section={section} />;
+      renderedLayout = <HeroGradientLayout section={section} />;
+      break;
     case 'content-text':
-      return <ContentTextLayout section={section} />;
+      renderedLayout = <ContentTextLayout section={section} />;
+      break;
     case 'content-two-column':
-      return <ContentTwoColumnLayout section={section} />;
+      renderedLayout = <ContentTwoColumnLayout section={section} />;
+      break;
     case 'content-text-image':
-      return <ContentTextImageLayout section={section} />;
+      renderedLayout = <ContentTextImageLayout section={section} />;
+      break;
     case 'content-image-text':
-      return <ContentImageTextLayout section={section} />;
+      renderedLayout = <ContentImageTextLayout section={section} />;
+      break;
     case 'data-chart':
-      return <DataChartLayout section={section} />;
+      renderedLayout = <DataChartLayout section={section} />;
+      break;
     case 'data-stats':
-      return <DataStatsLayout section={section} />;
+      renderedLayout = <DataStatsLayout section={section} />;
+      break;
     case 'data-table':
-      return <DataTableLayout section={section} />;
+      renderedLayout = <DataTableLayout section={section} />;
+      break;
     case 'media-full':
-      return <MediaFullLayout section={section} />;
+      renderedLayout = <MediaFullLayout section={section} />;
+      break;
     case 'media-gallery':
-      return <MediaGalleryLayout section={section} />;
+      renderedLayout = <MediaGalleryLayout section={section} />;
+      break;
     case 'comparison-two':
-      return <ComparisonTwoLayout section={section} />;
+      renderedLayout = <ComparisonTwoLayout section={section} />;
+      break;
     case 'comparison-three':
-      return <ComparisonThreeLayout section={section} />;
+      renderedLayout = <ComparisonThreeLayout section={section} />;
+      break;
     case 'timeline-vertical':
-      return <TimelineVerticalLayout section={section} />;
+      renderedLayout = <TimelineVerticalLayout section={section} />;
+      break;
     case 'timeline-horizontal':
-      return <TimelineHorizontalLayout section={section} />;
+      renderedLayout = <TimelineHorizontalLayout section={section} />;
+      break;
     case 'cta-simple':
-      return <CtaSimpleLayout section={section} />;
+      renderedLayout = <CtaSimpleLayout section={section} />;
+      break;
     case 'blank':
-      return <BlankLayout section={section} />;
+      renderedLayout = <BlankLayout section={section} />;
+      break;
     default:
-      return (
+      renderedLayout = (
         <div className="p-8 text-center text-[var(--sf-color-text-secondary)] bg-[var(--sf-color-surface)] rounded-[var(--sf-border-radius)]">
           <p className="text-lg font-medium">Unknown layout: {section.layoutId}</p>
           <p className="text-sm mt-2">This layout type is not yet supported.</p>
         </div>
       );
+      break;
   }
+
+  return (
+    <SectionRenderProvider sectionId={section.id}>
+      {renderedLayout}
+    </SectionRenderProvider>
+  );
 }

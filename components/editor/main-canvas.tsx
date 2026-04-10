@@ -1,15 +1,16 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { selectSection, selectSlot, setEditing, deselectAll } from '@/store/slices/editor-slice';
 import { updateSectionSlotContent } from '@/store/slices/presentation-slice';
 import { getLayout } from '@/lib/layouts';
 import { SectionRenderer } from '@/components/sections/section-renderer';
-import { TiptapEditor } from './tiptap-editor';
 import { InlineListEditor, parseItems } from './inline-list-editor';
 import { InlineStatsEditor, parseStats } from './inline-stats-editor';
+import { ImageGenerationDialog } from './image-generation-dialog';
 import type { ResolvedSection, ResolvedSlot } from '@/types/presentation';
 import type { SectionState } from '@/store/slices/presentation-slice';
 import type { LayoutTemplate } from '@/types/layout';
@@ -65,7 +66,10 @@ export function MainCanvas(): React.JSX.Element {
                   isSelected={selectedSectionId === section.id}
                   selectedSlotId={selectedSlotId}
                   isEditing={isEditing}
-                  onSelect={() => dispatch(selectSection(section.id))}
+                  onSelect={() => {
+                    dispatch(selectSection(section.id));
+                    dispatch(setEditing(true));
+                  }}
                   onSelectSlot={(slotId) => {
                     dispatch(selectSlot(slotId));
                     dispatch(setEditing(true));
@@ -132,7 +136,7 @@ function CanvasSection({
   return (
     <div
       className={cn(
-        'relative rounded-lg transition-all cursor-pointer shadow-md overflow-hidden',
+        'relative rounded-lg transition-all cursor-pointer shadow-md',
         isSelected
           ? 'ring-2 ring-primary ring-offset-2'
           : 'hover:ring-1 hover:ring-border hover:ring-offset-1',
@@ -172,7 +176,7 @@ function CanvasSection({
 // Editable Slot Overlay
 // ============================================================
 // Shows an absolute overlay on top of the rendered layout
-// that makes text slots clickable and editable inline.
+// for non-text slot interactions (image/list/stats tools).
 
 interface EditableSlotOverlayProps {
   section: SectionState;
@@ -182,10 +186,7 @@ interface EditableSlotOverlayProps {
   onUpdateSlot: (slotId: string, content: string | Record<string, unknown> | unknown[]) => void;
 }
 
-const TEXT_SLOT_TYPES = new Set(['TEXT', 'RICHTEXT', 'HEADING']);
-const EDITABLE_SLOT_TYPES = new Set([
-  'TEXT', 'RICHTEXT', 'HEADING', 'IMAGE', 'LIST', 'STATS',
-]);
+const EDITABLE_SLOT_TYPES = new Set(['IMAGE', 'LIST', 'STATS']);
 
 function EditableSlotOverlay({
   section,
@@ -199,28 +200,29 @@ function EditableSlotOverlay({
   );
 
   const selectedSlot = interactiveSlots.find((s) => s.id === selectedSlotId);
-  const selectedSlotIsText = Boolean(selectedSlot && TEXT_SLOT_TYPES.has(selectedSlot.type));
+
   const selectedSlotIsList = selectedSlot?.type === 'LIST';
   const selectedSlotIsStats = selectedSlot?.type === 'STATS';
+  const selectedSlotIsImage = selectedSlot?.type === 'IMAGE';
   const selectedContent =
     selectedSlot && typeof section.content[selectedSlot.id] === 'string'
       ? (section.content[selectedSlot.id] as string)
       : '';
 
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+
   return (
     <>
       {/* Transparent clickable overlay for editable slots */}
-      <div className="absolute inset-0 z-10">
+      <div className="absolute inset-0 z-10 overflow-visible">
         {interactiveSlots.map((slot) => {
           const pos = slot.position;
           const isSelected = selectedSlotId === slot.id;
-          const isTextSlot = TEXT_SLOT_TYPES.has(slot.type);
           return (
             <div
               key={slot.id}
               className={cn(
-                'absolute rounded transition-all',
-                isTextSlot ? 'cursor-text' : 'cursor-pointer',
+                'absolute rounded transition-all group cursor-pointer',
                 isSelected
                   ? 'ring-2 ring-primary/60 bg-primary/5'
                   : 'hover:ring-1 hover:ring-primary/30 hover:bg-primary/5',
@@ -236,12 +238,28 @@ function EditableSlotOverlay({
                 onSelectSlot(slot.id);
               }}
             >
-              {/* Show slot type badge on hover for non-text slots */}
-              {!isTextSlot && !isSelected && (
+              {/* Show slot type badge on hover */}
+              {!isSelected && (
                 <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <span className="text-[9px] rounded bg-primary/10 px-1 py-0.5 text-primary font-medium">
                     {slot.type}
                   </span>
+                </div>
+              )}
+
+              {/* Action for selected IMAGE slot */}
+              {isSelected && slot.type === 'IMAGE' && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setImageDialogOpen(true);
+                    }}
+                    className="flex items-center gap-2 bg-primary text-primary-foreground shadow-md hover:bg-primary/90 rounded-md px-4 py-2 text-sm font-medium transition-colors"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Generate with AI
+                  </button>
                 </div>
               )}
             </div>
@@ -249,30 +267,29 @@ function EditableSlotOverlay({
         })}
       </div>
 
-      {/* Inline editor panel for the selected slot */}
-      {selectedSlot && (selectedSlotIsText || selectedSlotIsList || selectedSlotIsStats) && (
+      <ImageGenerationDialog
+        open={imageDialogOpen}
+        onOpenChange={setImageDialogOpen}
+        onGenerate={(url) => {
+          if (selectedSlotId) {
+            onUpdateSlot(selectedSlotId, url);
+            setImageDialogOpen(false);
+          }
+        }}
+        initialQuery={
+          selectedSlotIsImage && selectedContent && !selectedContent.match(/^(https?:\/\/|data:image\/|\/)/i)
+            ? selectedContent
+            : ''
+        }
+      />
+
+      {/* Non-text editor panel (list/stats) shown below the slide */}
+      {selectedSlot && (selectedSlotIsList || selectedSlotIsStats) && (
         <div
-          className="relative z-20 mx-4 -mt-2 mb-2 rounded-lg border border-primary/20 bg-card p-4 shadow-lg"
+          className="absolute left-0 right-0 z-30 mx-4 rounded-lg border border-primary/20 bg-card p-4 shadow-lg"
+          style={{ top: '100%', marginTop: '8px' }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Text editor */}
-          {selectedSlotIsText && (
-            <>
-              <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="font-medium">{selectedSlot.label}</span>
-                <span className="rounded bg-muted px-1.5 py-0.5">{selectedSlot.type}</span>
-              </div>
-              <TiptapEditor
-                content={selectedContent}
-                placeholder={selectedSlot.label}
-                maxLength={selectedSlot.constraints?.maxLength}
-                isHeading={selectedSlot.type === 'HEADING'}
-                onUpdate={(html) => onUpdateSlot(selectedSlot.id, html)}
-                onFocus={() => onSelectSlot(selectedSlot.id)}
-              />
-            </>
-          )}
-
           {/* List editor */}
           {selectedSlotIsList && (
             <InlineListEditor

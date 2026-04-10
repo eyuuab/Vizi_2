@@ -25,6 +25,7 @@ interface UseKeyboardShortcutsOptions {
  */
 export function useKeyboardShortcuts({ onSave }: UseKeyboardShortcutsOptions): void {
   const dispatch = useAppDispatch();
+  const mode = useAppSelector((state) => state.editor.mode);
   const selectedSectionId = useAppSelector((state) => state.editor.selectedSectionId);
   const sections = useAppSelector((state) => state.presentation.sections);
   const isEditing = useAppSelector((state) => state.editor.isEditing);
@@ -37,6 +38,11 @@ export function useKeyboardShortcuts({ onSave }: UseKeyboardShortcutsOptions): v
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
         target.isContentEditable;
+
+      // In presentation mode, let the slideshow component fully own keyboard input.
+      if (mode === 'present') {
+        return;
+      }
 
       // Always-active shortcuts (even during editing)
       if (isCtrlOrCmd && event.key === 's') {
@@ -81,6 +87,11 @@ export function useKeyboardShortcuts({ onSave }: UseKeyboardShortcutsOptions): v
       if (isCtrlOrCmd && event.key === 'Enter') {
         event.preventDefault();
         dispatch(setMode('present'));
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {
+            // Fall back to in-page presentation mode if browser blocks fullscreen.
+          });
+        }
         return;
       }
 
@@ -151,7 +162,7 @@ export function useKeyboardShortcuts({ onSave }: UseKeyboardShortcutsOptions): v
         }
       }
     },
-    [dispatch, selectedSectionId, sections, isEditing, onSave],
+    [dispatch, mode, selectedSectionId, sections, isEditing, onSave],
   );
 
   useEffect(() => {

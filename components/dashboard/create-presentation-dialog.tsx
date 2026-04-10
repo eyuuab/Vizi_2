@@ -245,7 +245,12 @@ export function CreatePresentationDialog({ trigger }: CreatePresentationDialogPr
             }
             case 'section': {
               const sectionData = event.data as SectionContentGenerated;
-              collectedSections.push(sectionData);
+              const idx = collectedSections.findIndex((s) => s.sectionIndex === sectionData.sectionIndex);
+              if (idx >= 0) {
+                collectedSections[idx] = sectionData;
+              } else {
+                collectedSections.push(sectionData);
+              }
               setSections([...collectedSections]);
               break;
             }

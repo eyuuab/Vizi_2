@@ -49,3 +49,6 @@ prisma/migrations/
 .vscode/
 *.swp
 *.swo
+
+# clerk configuration (can include secrets)
+/.clerk/

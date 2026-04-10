@@ -20,6 +20,9 @@ interface SlideshowViewerProps {
   showNotes?: boolean;
   autoPlay?: boolean;
   autoPlayInterval?: number;
+  onExit?: () => void;
+  showExitButton?: boolean;
+  autoEnterFullscreen?: boolean;
 }
 
 // ============================================================
@@ -78,6 +81,9 @@ export function SlideshowViewer({
   showNotes: initialShowNotes = false,
   autoPlay = false,
   autoPlayInterval = 5000,
+  onExit,
+  showExitButton = false,
+  autoEnterFullscreen = false,
 }: SlideshowViewerProps): React.JSX.Element {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -142,6 +148,14 @@ export function SlideshowViewer({
     };
   }, []);
 
+  // Optionally auto-enter fullscreen on mount (used by editor Present mode)
+  useEffect(() => {
+    if (!autoEnterFullscreen || !containerRef.current || document.fullscreenElement) return;
+    containerRef.current.requestFullscreen().catch(() => {
+      // Fullscreen may fail due to browser policy; continue in windowed mode.
+    });
+  }, [autoEnterFullscreen]);
+
   // Keyboard navigation
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent): void {
@@ -158,9 +172,11 @@ export function SlideshowViewer({
           prevSlide();
           break;
         case 'Escape':
+          e.preventDefault();
           if (isFullscreen) {
             document.exitFullscreen().catch(() => { /* noop */ });
           }
+          onExit?.();
           break;
         case 'f':
         case 'F':
@@ -183,7 +199,7 @@ export function SlideshowViewer({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nextSlide, prevSlide, toggleFullscreen, goToSlide, isFullscreen, totalSlides]);
+  }, [nextSlide, prevSlide, toggleFullscreen, goToSlide, isFullscreen, totalSlides, onExit]);
 
   // Auto-play
   useEffect(() => {
@@ -344,6 +360,24 @@ export function SlideshowViewer({
           {isFullscreen ? 'Exit' : 'Fullscreen'}
         </button>
       </div>
+
+      {showExitButton && onExit && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (document.fullscreenElement) {
+              document.exitFullscreen().catch(() => {
+                // noop
+              });
+            }
+            onExit();
+          }}
+          className="absolute top-4 right-4 rounded-md bg-black/55 px-3 py-1.5 text-xs font-medium text-white/95 backdrop-blur-sm hover:bg-black/70"
+          aria-label="Exit presentation mode"
+        >
+          Exit Presentation
+        </button>
+      )}
 
       {/* Speaker Notes Panel */}
       {showNotes && currentSection?.notes && (

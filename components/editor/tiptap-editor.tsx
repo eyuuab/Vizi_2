@@ -61,6 +61,7 @@ export function TiptapEditor({
   const toolbarRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: {
@@ -91,8 +92,8 @@ export function TiptapEditor({
     editorProps: {
       attributes: {
         class: cn(
-          'outline-none min-h-[1em]',
-          isHeading && 'text-[var(--sf-text-4xl)] font-bold font-[var(--sf-font-heading)]',
+          'outline-none min-h-[1em] w-full',
+          isHeading && 'font-bold font-[var(--sf-font-heading)]',
           !isHeading && 'font-[var(--sf-font-body)]',
           className,
         ),
@@ -151,12 +152,13 @@ export function TiptapEditor({
   const currentChars = characterCount?.characters() ?? 0;
 
   return (
-    <div className="relative group">
+    <div className="relative group overflow-visible">
       {/* Floating toolbar - appears when editor is focused */}
       {isFocused && (
         <div
           ref={toolbarRef}
-          className="absolute -top-10 left-0 z-50 flex items-center gap-0.5 rounded-lg border bg-popover p-1 shadow-md"
+          className="absolute left-0 z-50 flex items-center gap-0.5 rounded-lg border bg-popover p-1 shadow-lg backdrop-blur-sm"
+          style={{ bottom: '100%', marginBottom: '6px' }}
           onMouseDown={(e) => e.preventDefault()}
         >
           <ToolbarButton

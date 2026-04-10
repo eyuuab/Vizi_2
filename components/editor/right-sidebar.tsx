@@ -354,13 +354,15 @@ function PresetGrid(): React.JSX.Element {
                 >
                   {preset.name}
                 </span>
-                <button
-                  type="button"
-                  className="ml-auto p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-muted transition-opacity"
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="ml-auto p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-muted transition-opacity cursor-pointer"
                   onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}
                 >
                   <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-                </button>
+                </span>
               </div>
             </button>
           );

@@ -1,6 +1,7 @@
 'use client';
 
 import type { SlotType } from '@/types/enums';
+import { TiptapEditor } from '@/components/editor/tiptap-editor';
 import { TextSlot } from './slots/text-slot';
 import { ImageSlot } from './slots/image-slot';
 import { ListSlot } from './slots/list-slot';
@@ -9,6 +10,10 @@ import { ChartSlot } from './slots/chart-slot';
 import { TableSlot } from './slots/table-slot';
 import { TimelineSlot } from './slots/timeline-slot';
 import { CtaSlot } from './slots/cta-slot';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { selectSection, selectSlot, setEditing } from '@/store/slices/editor-slice';
+import { updateSectionSlotContent } from '@/store/slices/presentation-slice';
+import { useSectionRenderContext } from './section-render-context';
 
 export interface SlotRendererProps {
   slotId: string;
@@ -30,13 +35,92 @@ export function SlotRenderer({
   className,
   layoutId,
 }: SlotRendererProps): React.JSX.Element {
+  const dispatch = useAppDispatch();
+  const selectedSectionId = useAppSelector((state) => state.editor.selectedSectionId);
+  const selectedSlotId = useAppSelector((state) => state.editor.selectedSlotId);
+  const isEditing = useAppSelector((state) => state.editor.isEditing);
+  const sectionContext = useSectionRenderContext();
+  const sectionId = sectionContext?.sectionId ?? null;
+
+  const isTextSlotType = slotType === 'HEADING' || slotType === 'TEXT' || slotType === 'RICHTEXT';
+  const isActiveTextEditor =
+    isTextSlotType &&
+    sectionId !== null &&
+    selectedSectionId === sectionId &&
+    selectedSlotId === slotId &&
+    isEditing;
+
+  const activateTextEditing = (event: React.MouseEvent) => {
+    if (!isTextSlotType || !sectionId) return;
+    event.stopPropagation();
+    dispatch(selectSection(sectionId));
+    dispatch(selectSlot(slotId));
+    dispatch(setEditing(true));
+  };
+
+  const updateTextContent = (html: string) => {
+    if (!sectionId) return;
+    dispatch(updateSectionSlotContent({ sectionId, slotId, content: html }));
+  };
+
   switch (slotType) {
-    case 'HEADING':
-      return <TextSlot content={content} className={className} isHeading placeholder={`Add ${slotId}`} />;
+    case 'HEADING': {
+      const textContent = typeof content === 'string' ? content : '';
+      if (isActiveTextEditor) {
+        return (
+          <div className="relative z-20">
+            <TiptapEditor
+              content={textContent}
+              placeholder={`Add ${slotId}`}
+              isHeading
+              className={className}
+              onUpdate={updateTextContent}
+              onFocus={() => {
+                if (!sectionId) return;
+                dispatch(selectSection(sectionId));
+                dispatch(selectSlot(slotId));
+                dispatch(setEditing(true));
+              }}
+            />
+          </div>
+        );
+      }
+
+      return (
+        <div className="relative z-20 cursor-text" onClick={activateTextEditing}>
+          <TextSlot content={content} className={className} isHeading placeholder={`Add ${slotId}`} />
+        </div>
+      );
+    }
 
     case 'TEXT':
-    case 'RICHTEXT':
-      return <TextSlot content={content} className={className} placeholder={`Add ${slotId}`} />;
+    case 'RICHTEXT': {
+      const textContent = typeof content === 'string' ? content : '';
+      if (isActiveTextEditor) {
+        return (
+          <div className="relative z-20">
+            <TiptapEditor
+              content={textContent}
+              placeholder={`Add ${slotId}`}
+              className={className}
+              onUpdate={updateTextContent}
+              onFocus={() => {
+                if (!sectionId) return;
+                dispatch(selectSection(sectionId));
+                dispatch(selectSlot(slotId));
+                dispatch(setEditing(true));
+              }}
+            />
+          </div>
+        );
+      }
+
+      return (
+        <div className="relative z-20 cursor-text" onClick={activateTextEditing}>
+          <TextSlot content={content} className={className} placeholder={`Add ${slotId}`} />
+        </div>
+      );
+    }
 
     case 'IMAGE':
     case 'VIDEO':

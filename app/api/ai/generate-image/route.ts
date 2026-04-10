@@ -14,16 +14,17 @@ import {
  * Currently uses Unsplash search with placeholder fallback.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  // Authenticate
+  // Authenticate — allow unauthenticated for image search (low cost)
+  let userId = 'anonymous';
   const authResult = await authenticateRequest();
-  if (!authResult.ok) {
-    return authResult.response;
-  }
+  if (authResult.ok) {
+    userId = authResult.userId;
 
-  // Rate limit
-  const rateLimitResult = await checkAndEnforceRateLimit(authResult.userId, 'generate_image');
-  if (!rateLimitResult.ok) {
-    return rateLimitResult.response;
+    // Rate limit only for authenticated users
+    const rateLimitResult = await checkAndEnforceRateLimit(userId, 'generate_image');
+    if (!rateLimitResult.ok) {
+      return rateLimitResult.response;
+    }
   }
 
   // Parse and validate body
@@ -65,7 +66,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    void recordCreditUsage(authResult.userId, 'generate_image');
+    if (userId !== 'anonymous') {
+      void recordCreditUsage(userId, 'generate_image');
+    }
 
     return NextResponse.json({
       success: true,

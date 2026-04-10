@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { cn } from '@/lib/utils';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { loadPresentation } from '@/store/slices/presentation-slice';
+import { setMode } from '@/store/slices/editor-slice';
 import { loadTheme } from '@/store/slices/theme-slice';
 import { useAutoSave } from './hooks/use-auto-save';
 import { useKeyboardShortcuts } from './hooks/use-keyboard-shortcuts';
@@ -12,8 +12,17 @@ import { LeftSidebar } from './left-sidebar';
 import { MainCanvas } from './main-canvas';
 import { RightSidebar } from './right-sidebar';
 import { BottomBar } from './bottom-bar';
-import { generateThemeCSS, getThemePreset } from '@/lib/themes';
-import type { SectionContent, StyleOverrides, TransitionConfig } from '@/types/presentation';
+import { generateThemeCSS, getThemePreset, resolveThemeTokens } from '@/lib/themes';
+import { getLayout } from '@/lib/layouts';
+import { SlideshowViewer } from '@/components/presentation/slideshow-viewer';
+import type {
+  SectionContent,
+  StyleOverrides,
+  TransitionConfig,
+  ResolvedSection,
+  ResolvedSlot,
+} from '@/types/presentation';
+import type { LayoutTemplate } from '@/types/layout';
 import type { SectionState } from '@/store/slices/presentation-slice';
 
 interface PresentationData {
@@ -49,8 +58,11 @@ interface EditorLayoutProps {
  */
 export function EditorLayout({ presentation }: EditorLayoutProps): React.JSX.Element {
   const dispatch = useAppDispatch();
+  const mode = useAppSelector((state) => state.editor.mode);
   const leftSidebarOpen = useAppSelector((state) => state.editor.leftSidebarOpen);
   const rightSidebarOpen = useAppSelector((state) => state.editor.rightSidebarOpen);
+  const sections = useAppSelector((state) => state.presentation.sections);
+  const title = useAppSelector((state) => state.presentation.title);
   const activeTokens = useAppSelector((state) => state.theme.activeTokens);
 
   // Initialize store with presentation data
@@ -103,6 +115,21 @@ export function EditorLayout({ presentation }: EditorLayoutProps): React.JSX.Ele
     return generateThemeCSS(activeTokens, '.sf-editor');
   }, [activeTokens]);
 
+  const themeVars = useMemo(() => {
+    if (!activeTokens) return undefined;
+    return resolveThemeTokens(activeTokens);
+  }, [activeTokens]);
+
+  const presentSlides = useMemo(
+    () =>
+      sections
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((section) => resolveSectionForPreview(section))
+        .filter((section) => !section.isHidden),
+    [sections],
+  );
+
   // Auto-save + keyboard shortcuts
   const { saveNow } = useAutoSave();
   useKeyboardShortcuts({ onSave: saveNow });
@@ -123,6 +150,92 @@ export function EditorLayout({ presentation }: EditorLayoutProps): React.JSX.Ele
 
         <BottomBar />
       </div>
+
+      {mode === 'present' && (
+        <div className="fixed inset-0 z-[100]">
+          <SlideshowViewer
+            slides={presentSlides}
+            title={title}
+            themeVars={themeVars}
+            autoEnterFullscreen
+            showExitButton
+            onExit={() => {
+              if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {
+                  // noop
+                });
+              }
+              dispatch(setMode('edit'));
+            }}
+          />
+        </div>
+      )}
     </>
   );
+}
+
+function resolveSectionForPreview(section: SectionState): ResolvedSection {
+  let layout: LayoutTemplate;
+  try {
+    layout = getLayout(section.layoutId);
+  } catch {
+    return {
+      id: section.id,
+      layoutId: section.layoutId,
+      layout: {
+        id: section.layoutId,
+        name: 'Unknown',
+        category: 'BLANK',
+        description: '',
+        thumbnail: '',
+        slots: [],
+        defaultContent: {},
+        minHeight: 200,
+        maxHeight: 'auto',
+        supportedMediaTypes: [],
+        pptxMapping: {},
+      },
+      order: section.order,
+      content: section.content,
+      styleOverrides: section.styleOverrides,
+      transitions: section.transitions,
+      notes: section.notes,
+      isHidden: section.isHidden,
+      resolvedSlots: [],
+      computedHeight: 200,
+      yOffset: 0,
+    };
+  }
+
+  const resolvedSlots: ResolvedSlot[] = layout.slots.map((slot) => ({
+    definition: {
+      id: slot.id,
+      type: slot.type,
+      label: slot.label,
+      required: slot.required,
+      position: slot.position,
+      aiHint: slot.aiHint,
+    },
+    content:
+      section.content[slot.id] !== undefined
+        ? section.content[slot.id]
+        : layout.defaultContent[slot.id] ?? '',
+    computedPosition: slot.position,
+  }));
+
+  return {
+    id: section.id,
+    layoutId: section.layoutId,
+    layout,
+    order: section.order,
+    content: section.content,
+    styleOverrides: section.styleOverrides,
+    transitions: section.transitions,
+    notes: section.notes,
+    isHidden: section.isHidden,
+    resolvedSlots,
+    computedHeight:
+      typeof layout.minHeight === 'number' ? layout.minHeight : 400,
+    yOffset: 0,
+  };
 }
